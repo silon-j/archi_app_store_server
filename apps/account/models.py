@@ -30,4 +30,4 @@ class ModelAccount(ModelMixin):
 
     class Meta:
         db_table='app_account'
-
+        
