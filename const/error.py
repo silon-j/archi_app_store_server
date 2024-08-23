@@ -17,6 +17,7 @@ class ErrorType(ErrorTypeBase):
     LOGIN_FAILED = (20102, '用户名或密码错误，连续多次错误账户将会被禁用')
     LOGIN_RATE_LIMIT = (20103, '账户密码认证超过请求限制')
     TOKEN_EXPIRED = (20104, '认证已失效，请重新登录')
+    PERMIT_FAILED = (20105, '权限不足')
 
     # 业务操作错误
     OBJECT_NOT_FOUND = (30001, '操作对象不存在')
