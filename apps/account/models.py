@@ -1,10 +1,11 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from libs.boost.mixin import ModelMixin
+from enum import Enum
 
 # Create your models here.
 class Account(ModelMixin):
-
+    
     username = models.CharField(max_length = 20)
     nickname = models.CharField(max_length = 20)
     password_hash = models.CharField(max_length = 100)
@@ -65,8 +66,14 @@ class AccountEmailAuthLog(ModelMixin):
     """
     email = models.EmailField(max_length=255)
     code = models.CharField(max_length=10)
+    use = models.SmallIntegerField()
     is_success = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'account_email_auth_log'
         ordering = ('-id',)
+
+
+class EmailAuthCodeForWhat(Enum):
+    REGISTER = 1
+    PASSWORD = 2

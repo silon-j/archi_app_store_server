@@ -125,6 +125,14 @@ DATABASES = {
     }
 }
 
+# Set Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 
 """
 用户认证配置
