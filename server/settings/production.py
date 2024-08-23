@@ -1,3 +1,6 @@
 from .base import *
+from loguru import logger
 
-# DEBUG = False
+logger.info("You are using settings.production")
+
+DEBUG = False

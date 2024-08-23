@@ -105,7 +105,7 @@ class HttpStatus(Enum):
 class JsonResponse(DjangoHttpResponse):
     """自定义格式Json Response"""
     data: Any = None
-    status_code: HttpStatus = HttpStatus.HTTP_200_OK.value
+    status_code: HttpStatus = HttpStatus.HTTP_200_OK
     error_type: ErrorType | None = None
     error_code: int | None = None
     error_message: str | None = None
@@ -133,7 +133,7 @@ class JsonResponse(DjangoHttpResponse):
         super().__init__(
             content=json.dumps(vars(self), cls=JsonEncoder, ensure_ascii=False),
             content_type='application/json',
-            status=self.status_code
+            status=self.status_code.value if isinstance(self.status_code, HttpStatus) else self.status_code
         )
 
 
