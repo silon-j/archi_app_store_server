@@ -54,7 +54,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
-    'apps.account',
+    'apps.account.apps.AccountConfig',
     # 'apps.plugin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -106,7 +106,7 @@ DATABASES = {
         'NAME': os.getenv('DATABASE_POSTGRES_NAME'),
         'USER': os.getenv('DATABASE_POSTGRES_USER'),
         'PASSWORD': os.getenv('DATABASE_POSTGRES_PASSWORD'),
-        'HOST': os.getenv('DATABASE_POSTGRES_HOST'),
+        'HOST':  os.getenv('DATABASE_POSTGRES_HOST'),
         'PORT': os.getenv('DATABASE_POSTGRES_PORT'),
     }
 }
