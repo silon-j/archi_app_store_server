@@ -3,10 +3,9 @@ import threading
 import time
 import traceback
 import uuid
-from urllib.parse import unquote
 from django.utils.deprecation import MiddlewareMixin
 from loguru import logger
-from libs.boost.utils import underscoreize, camelize
+from .utils import underscoreize, camelize
 
 
 class HandleExceptionMiddleware(MiddlewareMixin):
@@ -19,6 +18,8 @@ class HandleExceptionMiddleware(MiddlewareMixin):
 
 
 class CamelToSnakeMiddleware(MiddlewareMixin):
+    """请求及返回参数序列化，进行驼峰和蛇形互转
+    """
     def process_request(self, request):
         if request.method in ('POST', 'PATCH', 'PUT'):
             try:
@@ -45,6 +46,8 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
 
 
 class LogRequestMiddleware(MiddlewareMixin):
+    """请求过程日志
+    """
     def __init__(self, get_response):
         super().__init__(get_response)
         self.get_response = get_response
