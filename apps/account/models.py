@@ -46,6 +46,16 @@ class LoginLog(ModelMixin):
         ordering = ('-id',)
 
 
+class EmailAuthCodeForWhat(Enum):
+    """
+    邮箱服务的用途
+    """
+    # 注册
+    REGISTER = 1
+    # 重置密码
+    PASSWORD = 2
+
+
 class AccountEmailAuthCode(ModelMixin):
     """
     邮箱验证码
@@ -54,6 +64,8 @@ class AccountEmailAuthCode(ModelMixin):
     code = models.CharField(max_length=10)
     is_valid = models.BooleanField(default=True)
     expired = models.DateTimeField(null=True, default=None)    
+    for_what = models.SmallIntegerField(choices=[(tag.value, tag.name) for tag in EmailAuthCodeForWhat])
+
 
     class Meta:
         db_table = 'account_email_auth_code'
@@ -66,14 +78,9 @@ class AccountEmailAuthLog(ModelMixin):
     """
     email = models.EmailField(max_length=255)
     code = models.CharField(max_length=10)
-    use = models.SmallIntegerField()
     is_success = models.BooleanField(default=True)
-
+    for_what = models.SmallIntegerField(choices=[(tag.value, tag.name) for tag in EmailAuthCodeForWhat])
+ 
     class Meta:
         db_table = 'account_email_auth_log'
         ordering = ('-id',)
-
-
-class EmailAuthCodeForWhat(Enum):
-    REGISTER = 1
-    PASSWORD = 2

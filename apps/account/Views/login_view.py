@@ -7,6 +7,8 @@ from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class LoginView(View):
 
@@ -15,7 +17,18 @@ class LoginView(View):
     __PASSWORD_ERROR__ : str = "密码错误"
     __LOGIN_SUCCESS__ : str = "登录成功"
 
-    
+    @swagger_auto_schema(
+        operation_description="处理用户登录的请求",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description='用户名'),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description='密码'),
+            },
+            required=['email', 'password']
+        )
+        # TODO 添加返回值描述
+    )
     def post(self, request) -> JsonResponse:
         
         form, error = JsonParser(
