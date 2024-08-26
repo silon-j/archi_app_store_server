@@ -5,9 +5,12 @@ from enum import Enum
 
 # Create your models here.
 class Account(ModelMixin):
-    
+    # 文档中描述的账号->首字母加工号
     username = models.CharField(max_length = 20)
-    nickname = models.CharField(max_length = 20)
+    # 真实姓名
+    fullname = models.CharField(max_length = 20)
+    # 所属部门
+    department = models.CharField(max_length = 20)
     password_hash = models.CharField(max_length = 100)
     email = models.CharField(max_length=100, null=True)
     # 是否管理员

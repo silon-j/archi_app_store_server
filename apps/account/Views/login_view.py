@@ -2,7 +2,6 @@ import secrets
 from apps.account.models import Account, LoginLog
 from libs.boost.parser import Argument, JsonParser
 from libs.boost.http import JsonResponse
-from libs.boost.utils import generate_random_code, json_response
 from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
@@ -25,7 +24,7 @@ class LoginView(View):
                 'username': openapi.Schema(type=openapi.TYPE_STRING, description='用户名'),
                 'password': openapi.Schema(type=openapi.TYPE_STRING, description='密码'),
             },
-            required=['email', 'password']
+            required=['username', 'password']
         )
         # TODO 添加返回值描述
     )
@@ -60,7 +59,7 @@ class LoginView(View):
             login_log.message = self.__PASSWORD_ERROR__
             login_log.is_success = False
             login_log.save()
-            return json_response(errorMessage=self.__PASSWORD_ERROR__)
+            return JsonResponse(errorMessage=self.__PASSWORD_ERROR__)
         
         #如果数据一致则生成生成密钥给用户
         account.access_token = secrets.token_urlsafe(32)
@@ -72,5 +71,5 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return json_response(account)
+        return JsonResponse(message=account)
     
