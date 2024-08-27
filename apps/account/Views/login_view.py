@@ -1,7 +1,7 @@
 import secrets
 from apps.account.models import Account, LoginLog
 from libs.boost.parser import Argument, JsonParser
-from libs.boost.http import JsonResponse
+from libs.boost.http import JsonResponse, HttpStatus
 from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
@@ -36,7 +36,7 @@ class LoginView(View):
         ).parse(request.body)
         
         if error:
-            return JsonResponse(errorMessage=error)
+            return JsonResponse(errorMessage=error, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         
 #       记录一次用户登录
         login_log = LoginLog(
@@ -52,18 +52,21 @@ class LoginView(View):
             login_log.message = self.__USER_NDEFINE__
             login_log.is_success = False
             login_log.save()
-            return JsonResponse(error_message=self.__USER_NDEFINE__ )
+            return JsonResponse(error_message=self.__USER_NDEFINE__, status_code=HttpStatus.HTTP_404_NOT_FOUND)
         
         elif account.verify_password(form.password) == False:
             # 密码错误
             login_log.message = self.__PASSWORD_ERROR__
             login_log.is_success = False
             login_log.save()
-            return JsonResponse(errorMessage=self.__PASSWORD_ERROR__)
+            return JsonResponse(errorMessage=self.__PASSWORD_ERROR__, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         
         #如果数据一致则生成生成密钥给用户
         account.access_token = secrets.token_urlsafe(32)
         account.token_expired = timezone.now() + timedelta(seconds=settings.TOKEN_TTL)
+        # 修改账户最后一次登录和IP
+        account.last_ip = login_log.ip
+        account.last_login = timezone.now()
         account.save()
         
         # 记录一次用户登录
@@ -71,5 +74,6 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(message=account)
+        return JsonResponse(message=account, status_code=HttpStatus.HTTP_202_ACCEPTED)
+    
     

@@ -35,8 +35,10 @@ class Argument(object):
             if not self.filter_func(value):
                 raise ParseError(
                     self.help or 'Value Error: %s filter_func check failed' % self.name)
-        if self.handler:
+        if self.handler_func:
             value = self.handler(value)
+        
+        return value
 
     def _check_kv(self, has_key, value):
         """检查key和value
