@@ -129,8 +129,8 @@ class JsonParser(BaseParser):
     def extend(self, settings:JsonParserExtendSettings):
         paginate = settings.get('paginate', False)
         if paginate == True:
-            arg_current_page = Argument('current', type=str, required=True, help='请提供目标页数')
-            arg_page_size = Argument('page_size', type=int, required=False, default=10)
+            arg_current_page = Argument('current',data_type=str, required=True, help='请提供目标页数')
+            arg_page_size = Argument('page_size', data_type=int, required=False, default=10)
 
             self.add_argument(arg_current_page)
             self.add_argument(arg_page_size)

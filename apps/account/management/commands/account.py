@@ -6,7 +6,7 @@ class Command(BaseCommand):
     help = '账户管理'
 
     def add_arguments(self, parser):
-        parser.add_argument('action', type=str, help='执行动作')
+        parser.add_argument('action', data_type=str, help='执行动作')
         parser.add_argument('-u', required=False, help='用户名')
         parser.add_argument('-p', required=False, help='账户密码')
         parser.add_argument('-n', required=False, help='账户昵称')
