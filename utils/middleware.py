@@ -35,4 +35,4 @@ class AuthenticationMiddleware(MiddlewareMixin):
                 account.token_expired = timezone.now() + timezone.timedelta(seconds=settings.AUTHENTICATION_EXPIRE_TIME)
                 account.save()
                 return None
-        return JsonResponse(errType=ErrorType.TOKEN_EXPIRED, status=HttpStatus.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(error_type=ErrorType.TOKEN_EXPIRED, status_code=HttpStatus.HTTP_401_UNAUTHORIZED)

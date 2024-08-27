@@ -1,7 +1,6 @@
 import json
 from dataclasses import dataclass
 from typing import Any, Callable, Type
-from enum import Enum
 from libs.boost.extend import AttrDict
 from libs.boost.types import JsonParserExtendSettings
 
@@ -36,9 +35,7 @@ class Argument(object):
                 raise ParseError(
                     self.help or 'Value Error: %s filter_func check failed' % self.name)
         if self.handler_func:
-            value = self.handler(value)
-        
-        return value
+            value = self.handler_func(value)
 
     def _check_kv(self, has_key, value):
         """检查key和value
@@ -132,8 +129,8 @@ class JsonParser(BaseParser):
     def extend(self, settings:JsonParserExtendSettings):
         paginate = settings.get('paginate', False)
         if paginate == True:
-            arg_current_page = Argument('current', type=str, required=True, help='请提供目标页数')
-            arg_page_size = Argument('page_size', type=int, required=False, default=10)
+            arg_current_page = Argument('current',data_type=str, required=True, help='请提供目标页数')
+            arg_page_size = Argument('page_size', data_type=int, required=False, default=10)
 
             self.add_argument(arg_current_page)
             self.add_argument(arg_page_size)

@@ -20,8 +20,8 @@ def score_handler(value):
 
 def base_req(request):
     form, error = JsonParser(
-        Argument('name', type=str, required=True, help='路径不能为空'),
-        Argument('age', type=int, required=True, help="步骤不能为空", filter_func=age_filter),
+        Argument('name',data_type=str, required=True, help='路径不能为空'),
+        Argument('age',data_type=int, required=True, help="步骤不能为空", filter_func=age_filter),
         Argument('score', required=False, default=60, handler_func=score_handler),
     ).parse(request.GET)
     if error is not None:
@@ -39,8 +39,8 @@ class ClassRequestView(View):
     @admin_required
     def get(self, request: HttpRequest):
         form, error = JsonParser(
-            Argument('name', type=str, required=True, help='路径不能为空'),
-            Argument('age', type=int, required=True, help="步骤不能为空", filter_func=age_filter),
+            Argument('name',data_type=str, required=True, help='路径不能为空'),
+            Argument('age',data_type=int, required=True, help="步骤不能为空", filter_func=age_filter),
             Argument('score', required=False, default=60, handler_func=score_handler),
         ).parse(request.GET)
         if error is not None:
@@ -53,8 +53,8 @@ class ClassRequestView(View):
 
     def post(self, request: HttpRequest):
         form, error = JsonParser(
-            Argument('name', type=str, required=True, help='路径不能为空'),
-            Argument('age', type=int, required=True, help="步骤不能为空", filter_func=age_filter),
+            Argument('name',data_type=str, required=True, help='路径不能为空'),
+            Argument('age',data_type=int, required=True, help="步骤不能为空", filter_func=age_filter),
             Argument('score', required=False, default=60, handler_func=score_handler),
         ).parse(request.POST)
         if error is not None:
