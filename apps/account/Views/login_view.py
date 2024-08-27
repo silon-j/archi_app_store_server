@@ -31,12 +31,12 @@ class LoginView(View):
     def post(self, request) -> JsonResponse:
         
         form, error = JsonParser(
-            Argument('username', type=str, required=True),
-            Argument('password', type=str, required=True),
+            Argument('username', data_type=str, required=True),
+            Argument('password', data_type=str, required=True),
         ).parse(request.body)
         
         if error:
-            return JsonResponse(errorMessage=error, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_message=error, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         
 #       记录一次用户登录
         login_log = LoginLog(
@@ -59,11 +59,11 @@ class LoginView(View):
             login_log.message = self.__PASSWORD_ERROR__
             login_log.is_success = False
             login_log.save()
-            return JsonResponse(errorMessage=self.__PASSWORD_ERROR__, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_message=self.__PASSWORD_ERROR__, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         
         #如果数据一致则生成生成密钥给用户
-        account.access_token = secrets.token_urlsafe(32)
-        account.token_expired = timezone.now() + timedelta(seconds=settings.TOKEN_TTL)
+        account.access_token = secrets.token_urlsafe(24)
+        account.token_expired = timezone.now() + timedelta(seconds=settings.AUTHENTICATION_EXPIRE_TIME)
         # 修改账户最后一次登录和IP
         account.last_ip = login_log.ip
         account.last_login = timezone.now()
@@ -74,6 +74,6 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(message=account, status_code=HttpStatus.HTTP_202_ACCEPTED)
+        return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_202_ACCEPTED)
     
     

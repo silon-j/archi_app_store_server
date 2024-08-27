@@ -22,51 +22,47 @@ class RegisterView(View):
     __VERIFY_CODE_EXPIRE_ERROR__ : str = "验证码过期或错误"
     __REGISTE_SUCCESS__ : str = "注册成功"
 
-
     def post(self, request) -> JsonResponse:
         '''
         注册一个用户
         '''
         form, error = JsonParser(
-            Argument('username', type=str, required=True),
-            Argument('fullname', type=str),
-            Argument('department', type=str, required=True),
-            Argument('email', type=str, required=True, filter_func=lambda email: email.endswith('@ecadi.com')),
-            Argument('password', type=str, required=True),
-            Argument('verify_code', type=str, required=True),
+            Argument('username', data_type=str, required=True),
+            Argument('fullname', data_type=str),
+            Argument('department', data_type=str, required=True),
+            Argument('email', data_type=str, required=True, filter_func=lambda email: email.endswith('@ecadi.com')),
+            Argument('password', data_type=str, required=True),
+            Argument('verify_code', data_type=str, required=True),
         ).parse(request.body)
 
         if form is None:
             # 客户端没有发送所需的参数
             return JsonResponse(error_message=self.__PARAM_ERROR__ + "\n" + error)
         
-        with transaction.atomic():
-            # 检查用户是否存在
-            account = Account.objects.filter(email=form.username).first()
-            if account is not None:
-                # 邮箱已存在
-                return JsonResponse(error_message=self.__USER_ALREADY_EXIST__)
-            
-            vertify_code = AccountEmailAuthCode.objects.filter(email=form.email, for_what = EmailAuthCodeForWhat.REGISTER, is_valid = True).first()
-            if vertify_code is None:
-                # 数据库当中没有验证码
-                return JsonResponse(error_message=self.__NO_VERIFY_CODE__)
-            elif vertify_code.code != form.verify_code or vertify_code.expired<timezone.now:
-                # 验证码错误或者过期
-                return JsonResponse(error_message=self.__VERIFY_CODE_EXPIRE_ERROR__)
-
-            new_account : Account = Account(
-                username=form.username,
-                fullname = form.fullname,
-                department = form.department,
-                email = form.email,
-                password_hash=Account.make_password(form.password)
-            )
-
-            new_account.save()
-            vertify_code.is_valid = False
-            vertify_code.save()
-
-            return JsonResponse(data=self.__REGISTE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
+        
+        # 检查用户是否存在
+        account = Account.objects.filter(email=form.username).first()
+        if account is not None:
+            # 邮箱已存在
+            return JsonResponse(error_message=self.__USER_ALREADY_EXIST__)
+        
+        vertify_code = AccountEmailAuthCode.objects.filter(email=form.email, for_what = EmailAuthCodeForWhat.REGISTER.value, is_valid = True).first()
+        if vertify_code is None:
+            # 数据库当中没有验证码
+            return JsonResponse(error_message=self.__NO_VERIFY_CODE__)
+        elif vertify_code.code != form.verify_code or vertify_code.expired<timezone.now():
+            # 验证码错误或者过期
+            return JsonResponse(error_message=self.__VERIFY_CODE_EXPIRE_ERROR__)
+        new_account : Account = Account(
+            username=form.username,
+            fullname = form.fullname,
+            department = form.department,
+            email = form.email,
+            password_hash=Account.make_password(form.password)
+        )
+        new_account.save()
+        vertify_code.is_valid = False
+        vertify_code.save()
+        return JsonResponse(data=self.__REGISTE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
 
             

@@ -45,7 +45,7 @@ class RequestMailVerifyView(View):
             ).parse(request.body)
         
         if (form.for_what == EmailAuthCodeForWhat.REGISTER):
-            return self._request_register_verify(form.email)
+            return self._regist_new_account(form.email)
         elif (form.for_what == EmailAuthCodeForWhat.PASSWORD):
             return self._change_password(form.email)
         else:
@@ -60,33 +60,34 @@ class RequestMailVerifyView(View):
         if account is None:
             return JsonResponse(error_message='用户不存在')
         code = self.__generate_verification_code()
-        with transaction.atomic():
-            email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.PASSWORD).first()
-            if email_auth_code is None:
-                # 不存在则创建
-                email_auth_code = AccountEmailAuthCode(
-                    email=email,
-                    code=code, 
-                    is_valid=True,
-                    expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
-                    for_what=EmailAuthCodeForWhat.PASSWORD
-                    )
-            else:
-                email_auth_code.code = code
-            
-            # 发送验证码
-            self.__send_verify_code(email_auth_code.code, email_auth_code.email)
 
-            # 创建发送日志
-            email_auth_log = AccountEmailAuthLog(
+        email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.PASSWORD.value).first()
+        if email_auth_code is None:
+            # 不存在则创建
+            email_auth_code = AccountEmailAuthCode(
                 email=email,
-                code=code,
-                is_success=False,
-                for_what=EmailAuthCodeForWhat.PASSWORD
+                code=code, 
+                is_valid=True,
+                expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
+                for_what=EmailAuthCodeForWhat.PASSWORD.value
                 )
-            email_auth_code.save()
-            email_auth_log.save()
-            return JsonResponse(message='验证码已发送')
+        else:
+            email_auth_code.code = code
+            email_auth_code.is_valid = True
+            email_auth_code.expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED)
+        
+        # 发送验证码
+        self.__send_verify_code(email_auth_code.code, email_auth_code.email)
+        # 创建发送日志
+        email_auth_log = AccountEmailAuthLog(
+            email=email,
+            code=code,
+            is_success=False,
+            for_what=EmailAuthCodeForWhat.PASSWORD.value
+            )
+        email_auth_code.save()
+        email_auth_log.save()
+        return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
 
 
     def _regist_new_account(self, email: str) -> JsonResponse:
@@ -94,35 +95,38 @@ class RequestMailVerifyView(View):
         注册新用户的发送验证码逻辑
         '''
         account: Account = Account.objects.filter(email=email).first()
-        if account is None:
+        if account is not None:
             return JsonResponse(error_message='用户已存在')
+        
         code = self.__generate_verification_code()
-        with transaction.atomic():
-            email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.REGISTER).first()
-            if email_auth_code is None:
-            # 不存在则创建
-                email_auth_code = AccountEmailAuthCode(
-                    email=email,
-                    code=code, 
-                    is_valid=True,
-                    expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
-                    for_what=EmailAuthCodeForWhat.REGISTER
-                    )
-            else:
-                email_auth_code.code = code
-            # 发送验证码
-            self.__send_verify_code(email_auth_code.code, email_auth_code.email)
-
-            # 创建发送日志
-            email_auth_log = AccountEmailAuthLog(
+        
+        email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.REGISTER.value).first()
+        if email_auth_code is None:
+        # 不存在则创建
+            email_auth_code = AccountEmailAuthCode(
                 email=email,
-                code=code,
-                is_success=False,
-                for_what=EmailAuthCodeForWhat.REGISTER
-            )
-            email_auth_code.save()
-            email_auth_log.save()
-            return JsonResponse(message='验证码已发送')
+                code=code, 
+                is_valid=True,
+                expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
+                for_what=EmailAuthCodeForWhat.REGISTER.value
+                )
+        else:
+            email_auth_code.code = code
+            email_auth_code.is_valid = True
+            email_auth_code.expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED)
+        # 创建发送日志
+        email_auth_log = AccountEmailAuthLog(
+            email=email,
+            code=code,
+            is_success=False,
+            for_what=EmailAuthCodeForWhat.REGISTER.value
+        )
+        email_auth_code.save()
+        email_auth_log.save()
+        
+        # 发送验证码
+        self.__send_verify_code(email_auth_code.code, email_auth_code.email)
+        return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
     
 
     def __generate_verification_code(self, length=5) -> str:

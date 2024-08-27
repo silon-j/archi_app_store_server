@@ -17,7 +17,7 @@ class Account(ModelMixin):
     can_admin = models.BooleanField(default=False)
     is_super= models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    access_token = models.CharField(max_length=32)
+    access_token = models.CharField(max_length=32, default=None, null=True)
     token_expired = models.DateTimeField(null=True, default=None)
     last_login = models.DateTimeField(null=True, default=None)
     last_ip = models.CharField(max_length=20)
