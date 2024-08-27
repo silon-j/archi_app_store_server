@@ -34,9 +34,9 @@ class Argument(object):
         if self.filter_func:
             if not self.filter_func(value):
                 raise ParseError(
-                    self.data_help or 'Value Error: %s filter check failed' % self.name)
-        if self.handler_func:
-            value = self.handler_func(value)
+                    self.help or 'Value Error: %s filter_func check failed' % self.name)
+        if self.handler:
+            value = self.handler(value)
 
     def _check_kv(self, has_key, value):
         """检查key和value
@@ -64,15 +64,11 @@ class Argument(object):
             elif self.data_type == bool and isinstance(value, str):
                 value = value.lower() in ('true', 'false')
                 value = value.lower() == 'true'
-            elif issubclass(self.data_type, Enum):
-                # 支持枚举类
-                if not isinstance(value, self.data_type):
-                    value = self.data_type(value)
             elif not isinstance(value, self.data_type):
                 value = self.data_type(value)
         except (TypeError, ValueError, AssertionError):
             raise ParseError(
-                self.data_help or 'Type Error: %s type must be %s' % (self.name, self.data_type))
+                self.help or 'Type Error: %s type must be %s' % (self.name, self.data_type))
 
 
 
