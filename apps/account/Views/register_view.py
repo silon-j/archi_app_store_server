@@ -29,7 +29,7 @@ class RegisterView(View):
         '''
         form, error = JsonParser(
             Argument('username', type=str, required=True),
-            Argument('fullname', type=str, required=True),
+            Argument('fullname', type=str),
             Argument('department', type=str, required=True),
             Argument('email', type=str, required=True, filter_func=lambda email: email.endswith('@ecadi.com')),
             Argument('password', type=str, required=True),
