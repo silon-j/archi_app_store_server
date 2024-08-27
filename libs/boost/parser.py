@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from typing import Any, Callable, Type
+from enum import Enum
 from libs.boost.extend import AttrDict
 from libs.boost.types import JsonParserExtendSettings
 
@@ -30,12 +31,12 @@ class Argument(object):
         """
         self._check_kv(has_key, value)
         self._check_type(value)
-        if self.filter:
-            if not self.filter(value):
+        if self.filter_func:
+            if not self.filter_func(value):
                 raise ParseError(
-                    self.help or 'Value Error: %s filter check failed' % self.name)
-        if self.handler:
-            value = self.handler(value)
+                    self.data_help or 'Value Error: %s filter check failed' % self.name)
+        if self.handler_func:
+            value = self.handler_func(value)
 
     def _check_kv(self, has_key, value):
         """检查key和value
@@ -57,17 +58,21 @@ class Argument(object):
         """检查value类型，并尝试进行类型转换
         """
         try:
-            if self.type in (list, dict) and isinstance(value, str):
+            if self.data_type in (list, dict) and isinstance(value, str):
                 value = json.loads(value)
-                assert isinstance(value, self.type)
-            elif self.type == bool and isinstance(value, str):
+                assert isinstance(value, self.data_type)
+            elif self.data_type == bool and isinstance(value, str):
                 value = value.lower() in ('true', 'false')
                 value = value.lower() == 'true'
-            elif not isinstance(value, self.type):
-                value = self.type(value)
+            elif issubclass(self.data_type, Enum):
+                # 支持枚举类
+                if not isinstance(value, self.data_type):
+                    value = self.data_type(value)
+            elif not isinstance(value, self.data_type):
+                value = self.data_type(value)
         except (TypeError, ValueError, AssertionError):
             raise ParseError(
-                self.help or 'Type Error: %s type must be %s' % (self.name, self.type))
+                self.data_help or 'Type Error: %s type must be %s' % (self.name, self.data_type))
 
 
 

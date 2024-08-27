@@ -4,6 +4,7 @@ import random
 from apps.account.models import Account, LoginLog, EmailAuthCodeForWhat, AccountEmailAuthCode, AccountEmailAuthLog
 from libs.boost.parser import Argument, JsonParser
 from libs.boost.http import JsonResponse
+from libs.boost.http import HttpStatus
 from libs.email.netease import MailServer
 from django.views.generic import View
 from django.conf import settings
@@ -38,16 +39,17 @@ class RequestMailVerifyView(View):
     )
     def get(self, request) -> JsonResponse:
         form, err = JsonParser(
-            Argument('email', str),
+            Argument('email', data_type =str),
             Argument('for_what', data_type=EmailAuthCodeForWhat)
+            # Argument('for_what', data_type=[1,2,3],())
             ).parse(request.body)
-
+        
         if (form.for_what == EmailAuthCodeForWhat.REGISTER):
             return self._request_register_verify(form.email)
         elif (form.for_what == EmailAuthCodeForWhat.PASSWORD):
             return self._change_password(form.email)
         else:
-            return JsonResponse(error_message='未知的请求')
+            return JsonResponse(error_message='未知的请求', status_code=HttpStatus.HTTP_400_BAD_REQUEST)
 
 
     def _change_password(self, email: str) -> JsonResponse:
