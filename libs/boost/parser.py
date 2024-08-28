@@ -8,6 +8,7 @@ from libs.boost.types import JsonParserExtendSettings
 class ParseError(BaseException):
     """自定义解析异常
     """
+
     def __init__(self, message):
         self.message = message
 
@@ -21,9 +22,9 @@ class Argument(object):
     data_type: Type = str
     required: bool = True
     nullable: bool = False
-    filter_func: Optional[Callable] = None
-    handler_func: Optional[Callable] = None
-    data_help: str = None
+    filter_func: Callable | None = None
+    handler_func: Callable | None = None
+    help: str = None
 
     def parse(self, has_key, value):
         """解析参数
@@ -44,13 +45,13 @@ class Argument(object):
         if not has_key:
             if self.required and self.default is None:
                 raise ParseError(
-                    self.data_help or 'Required Error: %s is required' % self.name)
+                    self.help or 'Required Error: %s is required' % self.name)
             else:
                 return self.default
         elif value is None:
             if not self.nullable:
                 raise ParseError(
-                    self.data_help or 'Nullable Error: %s is not nullable' % self.name)
+                    self.help or 'Nullable Error: %s is not nullable' % self.name)
             else:
                 return None
 
@@ -72,9 +73,9 @@ class Argument(object):
             raise ParseError(
                 self.handler_func or 'Type Error: %s type must be %s' % (self.name, self.data_type))
 
-
 class BaseParser(object):
     """参数解析器基类"""
+
     def __init__(self, *args):
         self.args = []
         for e in args:
@@ -109,6 +110,7 @@ class BaseParser(object):
 
 class JsonParser(BaseParser):
     """Json解析器"""
+
     def __init__(self, *args):
         self.__data = None
         super(JsonParser, self).__init__(*args)
@@ -127,15 +129,13 @@ class JsonParser(BaseParser):
                 self.__data = data
         except (ValueError, AssertionError):
             raise ParseError('Invalid data type')
-        
-    def extend(self, settings:JsonParserExtendSettings):
+
+    def extend(self, settings: JsonParserExtendSettings):
         paginate = settings.get('paginate', False)
         if paginate == True:
-            arg_current_page = Argument('current',data_type=str, required=True, help='请提供目标页数')
+            arg_current_page = Argument('current', data_type=str, required=True, help='请提供目标页数')
             arg_page_size = Argument('page_size', data_type=int, required=False, default=10)
 
             self.add_argument(arg_current_page)
             self.add_argument(arg_page_size)
             return self
-        
-
