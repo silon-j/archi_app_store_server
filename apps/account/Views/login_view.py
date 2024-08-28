@@ -7,6 +7,8 @@ from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+from utils.utils import get_client_ip
+import uuid
 
 class LoginView(View):
 
@@ -20,13 +22,13 @@ class LoginView(View):
         ).parse(request.body)
         
         if error:
-            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
 #       记录一次用户登录
         login_log = LoginLog(
             username=form.username,
             # 更新ip，使用utils里面的ip函数
-            ip=request.META.get('REMOTE_ADDR', ''),
+            ip=get_client_ip(request),
             agent=request.META.get('HTTP_USER_AGENT', ''),
         )
 
@@ -37,17 +39,17 @@ class LoginView(View):
             login_log.message = ErrorType.ACCOUNT_NOT_EXIST.message
             login_log.is_success = False
             login_log.save()
-            return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
         
         if account.verify_password(form.password) == False:
             # 密码错误
             login_log.message = ErrorType.LOGIN_FAILED.message
             login_log.is_success = False
             login_log.save()
-            return JsonResponse(error_type=ErrorType.LOGIN_FAILED, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.LOGIN_FAILED)
         
         #如果数据一致则生成生成密钥给用户
-        account.access_token = secrets.token_urlsafe(24)
+        account.access_token = uuid.uuid4()
         account.token_expired = timezone.now() + timedelta(seconds=settings.AUTHENTICATION_EXPIRE_TIME)
         # 修改账户最后一次登录和IP
         account.last_ip = login_log.ip
@@ -59,6 +61,5 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_201_CREATED)
-    
+        return JsonResponse(data=str(account.access_token), status_code=HttpStatus.HTTP_201_CREATED)
     

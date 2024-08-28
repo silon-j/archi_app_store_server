@@ -149,6 +149,8 @@ AUTHENTICATION_EXCLUDES = (
 # token过期时间
 AUTHENTICATION_EXPIRE_TIME = 3600 * 24 * 7
 
+# 邮箱验证码过期时间
+VERIFY_CODE_EXPIRED = 5
 
 """
 邮箱配置

@@ -1,8 +1,8 @@
 from django.urls import path
-from apps.account.Views.login_view import LoginView
-from apps.account.Views.request_mail_verify_view import RequestMailVerifyView
-from apps.account.Views.register_view import RegisterView
-from apps.account.Views.change_password_view import ChangePasswordView
+from apps.account.views.login_view import LoginView
+from apps.account.views.request_mail_verify_view import RequestMailVerifyView
+from apps.account.views.register_view import RegisterView
+from apps.account.views.change_password_view import ChangePasswordView
 
 urlpatterns = [
     path('mailverify/', RequestMailVerifyView.as_view(), name='mail_request'),

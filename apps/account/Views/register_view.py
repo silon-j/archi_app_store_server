@@ -1,7 +1,7 @@
 import secrets
 import string
 import random
-from apps.account.models import Account, EmailAuthCodeForWhat, AccountEmailAuthCode
+from apps.account.models import Account, EmailAuthCodeChoice, AccountEmailAuthCode
 from libs.boost.http import HttpStatus
 from libs.boost.parser import Argument, JsonParser
 from libs.boost.http import JsonResponse
@@ -31,17 +31,17 @@ class RegisterView(View):
 
         if error:
             # 客户端没有发送所需的参数
-            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         # 检查用户是否存在
         is_account_exist = Account.objects.filter(email=form.email).exists()
         if is_account_exist:
             # 用户已存在
-            return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
         
         vertify_code = AccountEmailAuthCode.objects.filter(
             email=form.email,
-            for_what = EmailAuthCodeForWhat.REGISTER.value,
+            for_what = EmailAuthCodeChoice.REGISTER.value,
             is_valid = True,
             expired__gt = timezone.now()
             ).order_by("-id").first()
@@ -59,6 +59,6 @@ class RegisterView(View):
             vertify_code.save()
             return JsonResponse(data=self.__REGISTE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
         else:
-            return JsonResponse(error_type=ErrorType.VERIFY_CODE_ERROR, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.VERIFY_CODE_ERROR)
             
             
