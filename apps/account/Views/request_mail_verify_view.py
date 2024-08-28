@@ -10,8 +10,6 @@ from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from django.db import transaction
 
 
@@ -21,22 +19,6 @@ class RequestMailVerifyView(View):
     VERIFY_CODE_EXPIRED = 5
     __EMAIL_SUBJECT__ = "数字化工具库-验证码"
 
-    @swagger_auto_schema(
-        operation_description="处理邮箱验证码请求",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING, description='邮箱地址'),
-                'for_what': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    enum=['REGISTER', 'PASSWORD'], 
-                    description='验证码用途'
-                ),
-            },
-            required=['email', 'for_what']
-        )
-        # TODO 添加返回值描述
-    )
     def get(self, request) -> JsonResponse:
         form, err = JsonParser(
             Argument('email', data_type =str),
