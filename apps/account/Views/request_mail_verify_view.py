@@ -6,6 +6,7 @@ from libs.boost.parser import Argument, JsonParser
 from libs.boost.http import JsonResponse
 from libs.boost.http import HttpStatus
 from libs.email.netease import MailServer
+from const.error import ErrorType
 from django.views.generic import View
 from django.conf import settings
 from django.utils import timezone
@@ -31,7 +32,7 @@ class RequestMailVerifyView(View):
         elif (form.for_what == EmailAuthCodeForWhat.PASSWORD):
             return self._change_password(form.email)
         else:
-            return JsonResponse(error_message='未知的请求', status_code=HttpStatus.HTTP_400_BAD_REQUEST)
+            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
 
 
     def _change_password(self, email: str) -> JsonResponse:
@@ -40,10 +41,14 @@ class RequestMailVerifyView(View):
         '''
         account: Account = Account.objects.filter(email=email).first()
         if account is None:
-            return JsonResponse(error_message='用户不存在')
+            return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         code = self.__generate_verification_code()
 
-        email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.PASSWORD.value).first()
+        email_auth_code = AccountEmailAuthCode.objects.filter(
+            email=email,
+            for_what=EmailAuthCodeForWhat.PASSWORD
+            ).order_by('-id').first()
+        
         if email_auth_code is None:
             # 不存在则创建
             email_auth_code = AccountEmailAuthCode(
@@ -51,7 +56,7 @@ class RequestMailVerifyView(View):
                 code=code, 
                 is_valid=True,
                 expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
-                for_what=EmailAuthCodeForWhat.PASSWORD.value
+                for_what=EmailAuthCodeForWhat.PASSWORD
                 )
         else:
             email_auth_code.code = code
@@ -65,7 +70,7 @@ class RequestMailVerifyView(View):
             email=email,
             code=code,
             is_success=False,
-            for_what=EmailAuthCodeForWhat.PASSWORD.value
+            for_what=EmailAuthCodeForWhat.PASSWORD
             )
         email_auth_code.save()
         email_auth_log.save()
@@ -76,13 +81,14 @@ class RequestMailVerifyView(View):
         '''
         注册新用户的发送验证码逻辑
         '''
-        account: Account = Account.objects.filter(email=email).first()
-        if account is not None:
-            return JsonResponse(error_message='用户已存在')
+        is_account_exist: Account = Account.objects.filter(email=email).exists()
+
+        if is_account_exist:
+            return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST, status_code=HttpStatus.HTTP_400_BAD_REQUEST)
         
         code = self.__generate_verification_code()
         
-        email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.REGISTER.value).first()
+        email_auth_code = AccountEmailAuthCode.objects.filter(email=email, for_what=EmailAuthCodeForWhat.REGISTER).order_by('-id').first()
         if email_auth_code is None:
         # 不存在则创建
             email_auth_code = AccountEmailAuthCode(
@@ -90,7 +96,7 @@ class RequestMailVerifyView(View):
                 code=code, 
                 is_valid=True,
                 expired = timezone.now() + timedelta(minutes=self.VERIFY_CODE_EXPIRED),
-                for_what=EmailAuthCodeForWhat.REGISTER.value
+                for_what=EmailAuthCodeForWhat.REGISTER
                 )
         else:
             email_auth_code.code = code
@@ -101,7 +107,7 @@ class RequestMailVerifyView(View):
             email=email,
             code=code,
             is_success=False,
-            for_what=EmailAuthCodeForWhat.REGISTER.value
+            for_what=EmailAuthCodeForWhat.REGISTER
         )
         email_auth_code.save()
         email_auth_log.save()

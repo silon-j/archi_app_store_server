@@ -14,7 +14,6 @@ class MailServer:
 
     # server
     server = None
-    
 
     def __init__(
             self, 
