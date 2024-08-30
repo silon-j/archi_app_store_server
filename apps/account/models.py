@@ -52,40 +52,27 @@ class LoginLog(ModelMixin):
     class Meta:
         db_table = 'login_log'
         ordering = ('-id',)
-    
+
+            
 class EmailAuthCodeChoice(models.IntegerChoices):
     # 注册
-    REGISTER = 1
+    REGISTER = (1, "用户注册")
     # 重置密码
-    PASSWORD = 2
+    PASSWORD = (2, "修改密码")
 
 
 class AccountEmailAuthCode(ModelMixin):
     """
     邮箱验证码
-    """
-    
+    """    
+
     email = models.EmailField(max_length=255)
     code = models.CharField(max_length=10)
     is_valid = models.BooleanField(default=True)
+    is_success = models.BooleanField(default=False)
     expired = models.DateTimeField(null=True, default=None)    
     for_what = models.SmallIntegerField(choices=EmailAuthCodeChoice.choices, null=False)
 
-
     class Meta:
         db_table = 'account_email_auth_code'
-        ordering = ('-id',)
-
-
-class AccountEmailAuthLog(ModelMixin):
-    """
-    邮箱认证记录
-    """
-    email = models.EmailField(max_length=255)
-    code = models.CharField(max_length=10)
-    is_success = models.BooleanField(default=True)
-    for_what = models.SmallIntegerField(choices=EmailAuthCodeChoice.choices, null=False)
- 
-    class Meta:
-        db_table = 'account_email_auth_log'
         ordering = ('-id',)

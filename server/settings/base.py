@@ -141,7 +141,8 @@ CACHES = {
 AUTHENTICATION_EXCLUDES = (
     '/account/register/',
     '/account/login/',
-    '/account/mailverify/',
+    '/account/registerverify/',
+    '/account/passwordverify/',
     '/account/changepassword/',
     re.compile('/apis/.*'),
 )
