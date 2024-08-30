@@ -146,11 +146,6 @@ CACHES = {
 """
 # token校验白名单
 AUTHENTICATION_EXCLUDES = (
-    '/account/register/',
-    '/account/login/',
-    '/account/registerverify/',
-    '/account/passwordverify/',
-    '/account/changepassword/',
     re.compile('/apis/.*'),
 )
 
