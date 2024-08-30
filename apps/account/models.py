@@ -71,7 +71,7 @@ class AccountEmailAuthCode(ModelMixin):
     is_valid = models.BooleanField(default=True)
     is_success = models.BooleanField(default=False)
     expired = models.DateTimeField(null=True, default=None)    
-    for_what = models.SmallIntegerField(choices=EmailAuthCodeChoice.choices, null=False)
+    code_choice = models.SmallIntegerField(choices=EmailAuthCodeChoice.choices, null=False)
 
     class Meta:
         db_table = 'account_email_auth_code'
