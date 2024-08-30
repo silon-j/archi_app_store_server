@@ -63,6 +63,13 @@ WSGI_APPLICATION = 'server.wsgi.application'
 STATIC_URL = '/static/'
 
 """
+django 系统检查配置
+"""
+# settings.py
+SILENCED_SYSTEM_CHECKS = ['urls.W002']
+
+
+"""
 时区及语言
 https://docs.djangoproject.com/en/4.2/topics/i18n/
 """
