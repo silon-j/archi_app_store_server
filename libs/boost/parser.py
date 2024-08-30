@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Callable, Type, Optional
+from typing import Any, Callable, Type
 from libs.boost.extend import AttrDict
 from libs.boost.types import JsonParserExtendSettings
 
@@ -30,11 +30,11 @@ class Argument(object):
         """解析参数
         """
         self._check_kv(has_key, value)
-        value = self._check_type(value)
+        self._check_type(value)
         if self.filter_func:
             if not self.filter_func(value):
                 raise ParseError(
-                    self.data_help or 'Value Error: %s filter_func check failed' % self.name)
+                    self.help or 'Value Error: %s filter_func check failed' % self.name)
         if self.handler_func:
             value = self.handler_func(value)
         return value
@@ -67,11 +67,10 @@ class Argument(object):
                 value = value.lower() == 'true'
             elif not isinstance(value, self.data_type):
                 value = self.data_type(value)
-            
-            return value
         except (TypeError, ValueError, AssertionError):
             raise ParseError(
-                self.handler_func or 'Type Error: %s type must be %s' % (self.name, self.data_type))
+                self.help or 'Type Error: %s type must be %s' % (self.name, self.data_type))
+
 
 class BaseParser(object):
     """参数解析器基类"""

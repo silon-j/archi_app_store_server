@@ -109,8 +109,9 @@ class RegisterView(View):
             vertify_code.save()
             return JsonResponse(data=self.__REGISTE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
         else:
-            vertify_code.is_valid = False
-            vertify_code.save()
+            if vertify_code:
+                vertify_code.is_valid = False
+                vertify_code.save()
             return JsonResponse(error_type=ErrorType.VERIFY_CODE_ERROR)
 
 class LoginView(View):
@@ -152,7 +153,7 @@ class LoginView(View):
             return JsonResponse(error_type=ErrorType.LOGIN_FAILED)
         
         #如果数据一致则生成生成密钥给用户
-        account.access_token = uuid.uuid4()
+        account.access_token = uuid.uuid4().hex
         account.token_expired = timezone.now() + timedelta(seconds=settings.AUTHENTICATION_EXPIRE_TIME)
         # 修改账户最后一次登录和IP
         account.last_ip = login_log.ip
@@ -164,5 +165,5 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(data=str(account.access_token), status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_201_CREATED)
     

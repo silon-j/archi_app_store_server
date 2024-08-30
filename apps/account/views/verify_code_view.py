@@ -57,7 +57,7 @@ class RegisterVerifyCode(View):
         '''
         注册新用户的发送验证码逻辑
         '''
-        is_account_exist: Account = Account.objects.filter(email=form.email).exists()
+        is_account_exist: bool = Account.objects.filter(email=form.email).exists()
 
         if is_account_exist:
             return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)

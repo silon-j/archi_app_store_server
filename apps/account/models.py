@@ -12,14 +12,14 @@ class Account(ModelMixin):
     # 真实姓名
     fullname = models.CharField(max_length = 20)
     # 所属部门
-    department = models.CharField(max_length = 20)
+    department = models.CharField(max_length = 100)
     password_hash = models.CharField(max_length = 100)
     email = models.CharField(max_length=100, null=True)
     # 是否管理员
     can_admin = models.BooleanField(default=False)
     is_super= models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    access_token = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
+    access_token = models.CharField(max_length=32, null=True, blank=True)
     token_expired = models.DateTimeField(null=True, default=None)
     last_login = models.DateTimeField(null=True, default=None)
     last_ip = models.CharField(max_length=20)
