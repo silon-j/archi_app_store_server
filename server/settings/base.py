@@ -50,7 +50,7 @@ SECRET_KEY = 'django-insecure-x4o+k48k)@x78zc&1m35yphbnj-yp2&0xr$e_9g%1=qi4vea93
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # 从环境变量中获取额外的主机
 extra_hosts = os.getenv('EXTRA_ALLOWED_HOSTS', '')
 if extra_hosts:
