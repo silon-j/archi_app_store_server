@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.header import Header
 from django.conf import settings as server_settings
+
 from typing import List
 
 class MailServer:
@@ -14,6 +15,7 @@ class MailServer:
 
     # server
     server = None
+
 
     def __init__(
             self, 
