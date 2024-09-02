@@ -4,5 +4,4 @@ arrow == 1.3.0
 gunicorn == 22.0.0
 gevent == 24.2.1
 django-environ == 0.11.2
-pymysql == 1.1.1
 psycopg2-binary == 2.9.9
