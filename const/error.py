@@ -12,12 +12,15 @@ class ErrorType(ErrorTypeBase):
     ACCOUNT_DISABLED = (20002, '账户已被禁用')
     ACCOUNT_NOT_EXIST = (20003, '账户不存在')
     ACCOUNT_LOGIN_FAILED = (20004, '用户名或密码错误，30分钟内连续5次错误账户将会被禁用')
+    ACCOUNT_EXIST = (20005, '用户已存在')
+    ACCOUNT_MAIL_EXIST = (20006, '邮箱已存在')
 
     AUTH_FAILED = (20101, '身份认证失败')
     LOGIN_FAILED = (20102, '用户名或密码错误，连续多次错误账户将会被禁用')
     LOGIN_RATE_LIMIT = (20103, '账户密码认证超过请求限制')
     TOKEN_EXPIRED = (20104, '认证已失效，请重新登录')
     PERMIT_FAILED = (20105, '权限不足')
+    VERIFY_CODE_ERROR = (20106, '验证码错误或过期')
 
     # 业务操作错误
     OBJECT_NOT_FOUND = (30001, '操作对象不存在')
