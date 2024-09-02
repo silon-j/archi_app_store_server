@@ -44,7 +44,7 @@ class ChangePasswordView(View):
 
         vertify_code = AccountEmailAuthCode.objects.filter(
             email=account.email,
-            for_what = EmailAuthCodeChoice.PASSWORD.value,
+            code_choice = EmailAuthCodeChoice.PASSWORD.value,
             expired__gt = timezone.now(),
             is_valid = True
             ).order_by('-id').first()
@@ -89,7 +89,7 @@ class RegisterView(View):
         
         vertify_code = AccountEmailAuthCode.objects.filter(
             email=form.email,
-            for_what = EmailAuthCodeChoice.REGISTER,
+            code_choice = EmailAuthCodeChoice.REGISTER,
             is_valid = True,
             is_success = False,
             expired__gt = timezone.now()

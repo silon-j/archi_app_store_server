@@ -69,14 +69,16 @@ class RegisterVerifyCode(View):
             is_valid=True,
             is_success=False,
             expired = timezone.now() + timedelta(minutes=settings.VERIFY_CODE_EXPIRED),
-            for_what=EmailAuthCodeChoice.REGISTER
+            code_choice=EmailAuthCodeChoice.REGISTER
             )
-        email_auth_code.save()
+        try:
+            # 发送验证码
+            send_verify_code(email_auth_code.code, email_auth_code.email)
+            email_auth_code.save()
+            return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
+        except Exception as e:
+            return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_DONT_EXIST)
         
-        # 发送验证码
-        send_verify_code(email_auth_code.code, email_auth_code.email)
-        return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
-
 
 class ChangePasswordVerifyCode(View):
 
@@ -101,7 +103,7 @@ class ChangePasswordVerifyCode(View):
             is_valid=True,
             is_success=False,
             expired = timezone.now() + timedelta(minutes=settings.VERIFY_CODE_EXPIRED),
-            for_what=EmailAuthCodeChoice.PASSWORD
+            code_choice=EmailAuthCodeChoice.PASSWORD
             )
 
         # 发送验证码
