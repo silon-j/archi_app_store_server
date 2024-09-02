@@ -44,7 +44,7 @@ class ChangePasswordView(View):
 
         vertify_code = AccountEmailAuthCode.objects.filter(
             email=account.email,
-            code_choice = EmailAuthCodeChoice.PASSWORD.value,
+            code_choice = EmailAuthCodeChoice.PASSWORD,
             expired__gt = timezone.now(),
             is_valid = True
             ).order_by('-id').first()

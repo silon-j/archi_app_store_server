@@ -14,6 +14,7 @@ from datetime import timedelta
 from django.db import transaction
 from utils.utils import generate_random_str
 from django.conf import settings
+from smtplib import SMTPRecipientsRefused
 
 __EMAIL_SUBJECT__ = "数字化工具库-验证码"
 
@@ -76,10 +77,11 @@ class RegisterVerifyCode(View):
             send_verify_code(email_auth_code.code, email_auth_code.email)
             email_auth_code.save()
             return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
-        except Exception as e:
+        except SMTPRecipientsRefused:
             return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_DONT_EXIST)
+        except Exception as e:
+            return JsonResponse(error_message=e)
         
-
 class ChangePasswordVerifyCode(View):
 
     def get(self, request)-> JsonResponse:
