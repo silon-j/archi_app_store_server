@@ -114,6 +114,7 @@ class JsonResponse(DjangoHttpResponse):
     host: str = field(default_factory=lambda: socket.gethostname())
 
     def __post_init__(self):
+        self.success = True
         if any([self.error_type, self.error_message]):
             self.success = False
             self.data = {}

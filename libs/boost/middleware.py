@@ -21,7 +21,7 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
     """请求及返回参数序列化，进行驼峰和蛇形互转
     """
     def process_request(self, request):
-        if request.method in ('POST', 'PATCH', 'PUT'):
+        if request.method in ('POST', 'PATCH', 'PUT','OPTIONS'):
             try:
                 data = json.loads(request.body.decode('utf-8'))
                 snake_case_data = underscoreize(data)
@@ -29,7 +29,7 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
             except json.JSONDecodeError:
                 # 如果解析失败，可能是非JSON格式的数据，不做处理
                 pass
-        elif request.method in ('GET', 'DELETE'):
+        elif request.method in ('GET', 'DELETE','OPTIONS'):
             new_data = underscoreize(request.GET)
             request.GET = new_data
         else:
