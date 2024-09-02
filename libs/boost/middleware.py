@@ -67,3 +67,4 @@ class LogRequestMiddleware(MiddlewareMixin):
         duration = end_time - request.start_time
         logger.info(f"Request processed in {duration:.2f} seconds. Response status code: {response.status_code}")
         return response
+
