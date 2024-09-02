@@ -50,3 +50,10 @@ python manage.py runserver --settings=settings.local 0.0.0.0:8000
 ## 时间处理
 
 项目中推荐使用[arrow](https://github.com/arrow-py/arrow)进行时间处理
+
+
+## 本地UT库安装
+
+```bash
+docker-compose up
+```

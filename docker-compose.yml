@@ -1,0 +1,13 @@
+version: '3.8'  # 指定docker-compose.yml文件的版本
+
+services:
+  postgres:
+    image: 'postgres:14.5-alpine'
+    restart: always
+    environment:
+      POSTGRES_DB: appstore
+      POSTGRES_USER: unittest
+      POSTGRES_PASSWORD: unittest
+      TZ: Asia/Shanghai
+    ports:
+      - 5435:5432
