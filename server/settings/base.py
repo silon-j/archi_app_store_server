@@ -156,6 +156,25 @@ AUTHENTICATION_EXPIRE_TIME = 3600 * 24 * 7
 VERIFY_CODE_EXPIRED = 5
 
 """
+cors settings
+"""
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS  =  [ 
+    "accept" , 
+    "accept-encoding" , 
+    "authorization" , 
+    "content-type" , 
+    "dnt" , 
+    "origin" , 
+    "user-agent" , 
+    "x-csrftoken" , 
+    "x-requested-with" , 
+]
+CORS_ORIGIN_WHITELIST = (
+    'http://localhost:3000',
+)
+
+"""
 邮箱配置
 """
 DEFAULT_EMAIL_ACCOUNT = os.environ.get('DEFAULT_EMAIL_ACCOUNT')
