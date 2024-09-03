@@ -54,10 +54,12 @@ class RegisterVerifyCode(View):
     def get(self, request)->JsonResponse:
         form, err = JsonParser(
             Argument('email', data_type =str, required=True),
-            ).parse(request.body)
+            ).parse(request.GET)
         '''
         注册新用户的发送验证码逻辑
         '''
+        if err:
+            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         is_account_exist: bool = Account.objects.filter(email=form.email).exists()
 
         if is_account_exist:
@@ -72,6 +74,7 @@ class RegisterVerifyCode(View):
             expired = timezone.now() + timedelta(minutes=settings.VERIFY_CODE_EXPIRED),
             code_choice=EmailAuthCodeChoice.REGISTER
             )
+        print(f"邮箱是{email_auth_code.email}")
         try:
             # 发送验证码
             send_verify_code(email_auth_code.code, email_auth_code.email)
@@ -88,7 +91,7 @@ class ChangePasswordVerifyCode(View):
         form, err = JsonParser(
             Argument('username', data_type =str, required=True),
             Argument('email', data_type=str, required=True)
-            ).parse(request.body)
+            ).parse(request.GET)
         
         if err:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
