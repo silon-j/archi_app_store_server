@@ -8,11 +8,13 @@ from const.error import ErrorType
 from libs.boost.parser import Argument, JsonParser
 from libs.boost.http import HttpStatus, JsonResponse
 import os
-from libs.boost.Sts import Sts, CIScope, Scope
+from sts.sts import Sts
+from utils.decorators import admin_required
 
 __FILED_REQUIRED__ : str = "不可以为空"
 __FILED_EXISTS__ : str = "已存在"
 __FILED_NOT_EXISTS__ : str = "不可用"
+__COS_CREDENTIAL_ERR__ : str = "获取腾讯云对象存储令牌出现错误"
 # Create your views here.
 class CosTempCredentialView(View):
     def get(self, request):
@@ -48,9 +50,10 @@ class CosTempCredentialView(View):
         try:
             sts = Sts(config)
             response = sts.get_credential()
+            return JsonResponse(response)
         except Exception as e:
-            print(e)
-        return JsonResponse(response)
+            loguru.logger.error(e)
+            return JsonResponse(error_message=__COS_CREDENTIAL_ERR__)
     
 #插件信息
 class PluginView(View):
@@ -65,7 +68,7 @@ class PluginView(View):
             Argument('version_no', data_type=str, required=True),
             Argument('description', data_type=str, required=True),
             Argument('type', data_type=int, required=True, filter_func=lambda type: [Plugin.TYPE_PLUGIN, Plugin.TYPE_LINK, Plugin.TYPE_APPLICATION].__contains__(type)),
-            Argument('attachment_url', data_type=str, required=False),
+            Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
             Argument('execution_file_path', data_type=str, required=False),
             Argument('authors', data_type=list, required=False),
@@ -73,8 +76,6 @@ class PluginView(View):
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
-        if plugin.attachment_url is None :
-            return JsonResponse(error_message=f"文件链接{__FILED_REQUIRED__}")
         if plugin.type == Plugin.TYPE_APPLICATION and plugin.execution_file_path is None :
             return JsonResponse(error_message=f"应用入口{__FILED_REQUIRED__}")
         if Plugin.objects.filter(name=plugin.name).exists() :
@@ -123,27 +124,28 @@ class PluginView(View):
 class PluginVersionView(View):
     #获取插件列表
     def get(self, request):
-        name = request.GET.get('name', None)  
-        category_id = request.GET.get('category_id', 0)  
-        if category_id == 0:
-            return JsonResponse(error_message=f'分类ID{__FILED_REQUIRED__}')
+        param, error = JsonParser(
+            Argument('name', data_type=str, required=False),
+            Argument('category_id', data_type=int, required=True, help=f'分类ID{__FILED_REQUIRED__}'),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
         # 从所有插件开始
         plugin_ids = Plugin.objects.all().values('id')
-        if name:
-            plugin_ids = plugin_ids.filter(name__icontains=name)
-        if category_id is not None :
-            if not PluginCategory.objects.filter(id=category_id).exists():
-                return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
-            category_ids_query = PluginCategory.objects.filter(parent__id=category_id).values('id')
-            category_ids = [item['id'] for item in category_ids_query]
-            plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
+        if param.name:
+            plugin_ids = plugin_ids.filter(name__icontains=param.name)
+        if not PluginCategory.objects.filter(id=param.category_id).exists():
+            return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
+        category_ids_query = PluginCategory.objects.filter(parent__id=param.category_id).values('id')
+        category_ids = [item['id'] for item in category_ids_query]
+        plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
         plugins = Plugin.objects.all().filter(id__in=plugin_ids)
         #怎么获取最新的插件版本 item.versions.first() 这里要特殊处理下
         result = []
         for item in plugins:
             newest_version = item.versions.order_by('-id').first()
             tags = [tag.text for tag in newest_version.tags.all()]
-            for category in item.categories.all():
+            for category in item.categories.filter(id__in=category_ids):
                 result.append({'id':item.id, 'version_id':newest_version.id, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
         return JsonResponse(result)
 
@@ -157,7 +159,7 @@ class PluginCategoryView(View):
         except Exception as e:
             loguru.logger.error(f"生成插件类别失败: {e}")
             return JsonResponse(error_message='获取插件分类失败')
-
+    @admin_required
     def post(self, request):
         form, error = JsonParser(
             Argument('name', data_type=str, required=True),
@@ -167,8 +169,6 @@ class PluginCategoryView(View):
             return JsonResponse(error_message=error)
         if PluginCategory.objects.filter(name=form.name).exists():
             return JsonResponse(error_message=f'分类名称:({form.name}){__FILED_EXISTS__}')
-        if not request.account.is_super:
-            return JsonResponse(error_message='仅限管理员添加')
         parent_category = None
         if form.parent_id != None and form.parent_id > 0:
             if PluginCategory.objects.filter(id=form.parent_id).exists():
@@ -177,7 +177,8 @@ class PluginCategoryView(View):
                 return JsonResponse(error_message=f'分类id({form.parent_id}){__FILED_NOT_EXISTS__}')
         category = PluginCategory.objects.create(
             name=form.name,
-            parent=parent_category
+            parent=parent_category,
+            created_user=request.account
         )
         return JsonResponse(category.id)
  
@@ -194,10 +195,13 @@ class PluginCategoryView(View):
 
 #插件详情接口
 class PluginVersionDetailView(View):
-    def get(self, request, version_id):
-        if not PluginVersion.objects.filter(id=version_id).exists():
-            return JsonResponse(error_type=ErrorType.OBJECT_NOT_FOUND)
-        pluginVersionObj = PluginVersion.objects.filter(id=version_id).first()
+    def get(self, request):
+        param, error = JsonParser(
+            Argument('version_id', data_type=int, required=True, help=f'插件版本ID{__FILED_REQUIRED__}', filter_func=lambda id: PluginVersion.objects.filter(id=id).exists()),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+        pluginVersionObj = PluginVersion.objects.filter(id=param.version_id).first()
         # 将模型实例序列化为字典或其他格式
         plugin_dto = {
             'id': pluginVersionObj.id,
@@ -217,22 +221,26 @@ class PluginVersionDetailView(View):
         }
         # 返回JSON响应
         return JsonResponse(plugin_dto)
-    
+
 #操作记录
 class OperationLogView(View):
-    def post(self, request, version_id):
+    def post(self, request):
         form, error = JsonParser(
+            Argument('version_id', data_type=int, required=True, help=f'插件版本ID{__FILED_REQUIRED__}'),
             Argument('type', data_type=str, required=True, filter_func=lambda type: [OperationLog.TYPE_OPEN, OperationLog.TYPE_OPEN , OperationLog.TYPE_INSTALL].__contains__(type)),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
-        version = get_object_or_404(PluginVersion, id=version_id)
+        version = get_object_or_404(PluginVersion, id=form.version_id)
         log = OperationLog.objects.create(
             version=version,
             type=form.type,
             created_user=request.account
         )
         return JsonResponse(log.id)
-    def get(self, request, version_id):
-        logs = OperationLog.objects.filter(version__id=version_id)
+    def get(self, request):
+        form, error = JsonParser(
+            Argument('version_id', data_type=int, required=True, help=f'插件版本ID{__FILED_REQUIRED__}'),
+        ).parse(request.GET)
+        logs = OperationLog.objects.filter(version__id=form.version_id)
         return JsonResponse([{'id':log.id,'plugin_name':log.version.plugin.name, 'version_no':log.version.version_no, 'type': log.type, 'created_at':log.created_at } for log in logs])

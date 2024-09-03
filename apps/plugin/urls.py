@@ -7,6 +7,6 @@ urlpatterns = [
     path('/category', PluginCategoryView.as_view(), name='plugin-category'),
     path('', PluginView.as_view(), name='plugin'),
     path('/version', PluginVersionView.as_view(), name='plugin-version'),
-    path('/version/<int:version_id>', PluginVersionDetailView.as_view(), name='plugin-detail'),
-    path('/version/<int:version_id>/log', OperationLogView.as_view(), name='plugin-log')
+    path('/version/detail', PluginVersionDetailView.as_view(), name='plugin-detail'),
+    path('/version/log', OperationLogView.as_view(), name='plugin-log')
 ]
