@@ -14,6 +14,7 @@ class ErrorType(ErrorTypeBase):
     ACCOUNT_LOGIN_FAILED = (20004, '用户名或密码错误，30分钟内连续5次错误账户将会被禁用')
     ACCOUNT_EXIST = (20005, '用户已存在')
     ACCOUNT_MAIL_EXIST = (20006, '邮箱已存在')
+    ACCOUNT_MAIL_DONT_EXIST = (20007, '邮箱不存在')
 
     AUTH_FAILED = (20101, '身份认证失败')
     LOGIN_FAILED = (20102, '用户名或密码错误，连续多次错误账户将会被禁用')
