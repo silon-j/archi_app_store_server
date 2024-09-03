@@ -30,7 +30,8 @@ class Argument(object):
         """解析参数
         """
         self._check_kv(has_key, value)
-        self._check_type(value)
+        if self.required or value is not None:
+            self._check_type(value)
         if self.filter_func:
             if not self.filter_func(value):
                 raise ParseError(
