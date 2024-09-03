@@ -11,7 +11,7 @@ class Tag(ModelMixin):
     def __str__(self):
         return self.text
     class Meta:
-        db_table = 'tag'
+        db_table = 'plugin_tag'
         ordering = ('-id',)
     
 # 开发者信息
@@ -22,7 +22,7 @@ class Developer(ModelMixin):
     def __str__(self):
         return self.name
     class Meta:
-        db_table = 'developer'
+        db_table = 'plugin_developer'
         ordering = ('-id',)
 
 # 插件分类信息
@@ -84,7 +84,7 @@ class PluginVersion(ModelAudit):
     attachment_size = models.BigIntegerField(verbose_name='文件大小', null=True)
     execution_file_path = models.CharField(max_length=200,verbose_name='应用入口',null=True,blank=True)
     authors = models.ManyToManyField(Developer, db_table='r_plugin_version_developer')
-    tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_version_tag')
+    tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_plugin_version_tag')
     status = models.IntegerField(choices=STATUSES_CHOICES, default=STATUS_NEW, verbose_name='状态')
     publish_date = models.DateTimeField("发布时间", default=timezone.now)
     def __str__(self):
@@ -110,5 +110,5 @@ class OperationLog(ModelMixin):
     def __str__(self):
         return self.created_user.username + '-' + self.version.plugin.name + '-' + self.version.version_no
     class Meta:
-        db_table = 'operation_log'
+        db_table = 'plugin_operation_log'
         ordering = ('-id',)
