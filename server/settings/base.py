@@ -162,7 +162,7 @@ CACHES = {
 """
 # token校验白名单
 AUTHENTICATION_EXCLUDES = (
-    re.compile('api/v1/account/.*'),
+    re.compile('/api/.*'),
 )
 
 # token过期时间
