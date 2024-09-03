@@ -109,7 +109,7 @@ class JsonResponse(DjangoHttpResponse):
     error_type: ErrorType | None = None
     error_code: int | None = None
     error_message: str | None = None
-    show_type: ShowType = ShowType.SILENT
+    show_type: ShowType | None = ShowType.SILENT
     success: bool = field(init=False, default=True)
     host: str = field(default_factory=lambda: socket.gethostname())
 
@@ -118,8 +118,8 @@ class JsonResponse(DjangoHttpResponse):
         if any([self.error_type, self.error_message]):
             self.success = False
             self.data = {}
-            if not self.show_type:
-                self.show_type = ShowType.MESSAGE_ERROR
+            if self.show_type == ShowType.SILENT:
+                self.show_type = ShowType.MESSAGE_ERROR               
 
         if self.error_type:
             self.error_code = self.error_type.code
