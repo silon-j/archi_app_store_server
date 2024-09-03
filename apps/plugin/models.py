@@ -1,8 +1,9 @@
 from django.db import models
-from apps.account.models import Account, ModelAudit
+from apps.account.models import Account
 from django.utils import timezone
 
 from libs.boost.mixin import ModelMixin
+from utils.mixin import ModelAudit
 
 # 标签信息
 class Tag(ModelMixin):
@@ -25,7 +26,7 @@ class Developer(ModelMixin):
         ordering = ('-id',)
 
 # 插件分类信息
-class PluginCategory(ModelMixin):
+class PluginCategory(ModelAudit):
     name = models.CharField(max_length=200)
     parent = models.ForeignKey(
         'self',  # 外键指向自身
@@ -42,20 +43,19 @@ class PluginCategory(ModelMixin):
         ordering = ('-id',)
 
 # 插件信息
-class Plugin(ModelMixin):
+class Plugin(ModelAudit):
     TYPE_PLUGIN=1
     TYPE_APPLICATION=2
     TYPE_LINK=3
-    TYPES = [
+    TYPES_CHOICES = (
         (TYPE_PLUGIN, '插件'),
         (TYPE_APPLICATION, '应用'),
         (TYPE_LINK, '链接'),
-    ]
+    )
     name = models.CharField(max_length=200)
-    type = models.CharField(max_length=1, choices=TYPES, default=TYPE_LINK, verbose_name='版本类别')
+    type = models.IntegerField(choices=TYPES_CHOICES, default=TYPE_LINK, verbose_name='版本类别')
     icon_url = models.URLField('插件图标')
     categories = models.ManyToManyField(PluginCategory, related_name='plugin_category', db_table='r_plugin_category')
-    created_user = models.ForeignKey(Account, on_delete=models.CASCADE)
     def __str__(self):
         return self.name
     class Meta:
@@ -70,7 +70,7 @@ class PluginVersion(ModelAudit):
     STATUS_PULISH=4
     STATUS_FAIL=5
 
-    STATUSES = [
+    STATUSES_CHOICES = [
         (STATUS_NEW, '新建'),
         (STATUS_PENDING, '待审核'),
         (STATUS_APROVE, '已审核'),
@@ -83,12 +83,12 @@ class PluginVersion(ModelAudit):
     attachment_url = models.URLField(verbose_name='文件链接') #文件链接
     attachment_size = models.BigIntegerField(verbose_name='文件大小', null=True)
     execution_file_path = models.CharField(max_length=200,verbose_name='应用入口',null=True,blank=True)
-    authors = models.ManyToManyField(Developer)
+    authors = models.ManyToManyField(Developer, db_table='r_plugin_version_developer')
     tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_version_tag')
-    status = models.CharField(max_length=1, choices=STATUSES, default=STATUS_NEW, verbose_name='状态')
+    status = models.IntegerField(choices=STATUSES_CHOICES, default=STATUS_NEW, verbose_name='状态')
     publish_date = models.DateTimeField("发布时间", default=timezone.now)
     def __str__(self):
-        return self.name
+        return self.plugin.name
     class Meta:
         db_table = 'plugin_version'
         ordering = ('-id',)
@@ -98,17 +98,17 @@ class OperationLog(ModelMixin):
     TYPE_OPEN=1
     TYPE_INSTALL=2
     TYPE_RUN=3
-    TYPES = [
+    TYPES_CHOICES = [
         (TYPE_OPEN, '打开'),
         (TYPE_INSTALL, '安装'),
         (TYPE_RUN, '运行'),
     ]
     version = models.ForeignKey(PluginVersion, on_delete=models.CASCADE, related_name='logs')
     created_user = models.ForeignKey(Account, on_delete=models.CASCADE, verbose_name='操作者')
-    type = models.CharField(max_length=1, choices=TYPES, default=TYPE_OPEN, verbose_name='操作类型')
+    type = models.IntegerField(choices=TYPES_CHOICES, default=TYPE_OPEN, verbose_name='操作类型')
     
     def __str__(self):
-        return self.created_user.name + '-' + self.version.plugin.name + '-' + self.version.version_no
+        return self.created_user.username + '-' + self.version.plugin.name + '-' + self.version.version_no
     class Meta:
-        db_table = 'opereation_log'
+        db_table = 'operation_log'
         ordering = ('-id',)

@@ -77,16 +77,3 @@ class AccountEmailAuthCode(ModelMixin):
         db_table = 'account_email_auth_code'
         ordering = ('-id',)
 
-
-class ModelAudit(ModelMixin):
-    """审计模型类，提供操作Account
-    """
-    created_user = models.ForeignKey(Account, on_delete=models.SET_NULL, verbose_name='创建人', related_name='created_by', null=True)
-    updated_user = models.ForeignKey(Account, on_delete=models.SET_NULL, verbose_name='更新人', related_name='updated_by', null=True)
-    deleted_user = models.ForeignKey(Account, on_delete=models.SET_NULL, verbose_name='删除人', related_name='deleted_by', null=True)
-
-    class Meta:
-        """在 Meta 类中填入 abstract=True。该模型将不会创建任何数据表。
-        当其用作其它模型类的基类时，它的字段会自动添加至子类
-        """
-        abstract = True
