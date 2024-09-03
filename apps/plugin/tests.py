@@ -82,7 +82,7 @@ class PluginVersionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response.success, True, response_json['errorMessage'])
-        response = self.client.get(reverse('plugin-detail', args=[response_json['data']]), headers=headers)
+        response = self.client.get(reverse('plugin-detail'), headers=headers, data = {'version_id': response_json['data']})
         self.assertEqual(response.status_code, 200)
         response_json = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response.success, True, response_json['errorMessage'])
@@ -94,12 +94,18 @@ class PluginVersionViewTests(TestCase):
         self.assertEqual(response.success, True, response_json['errorMessage'])
         self.assertEqual(1, len(response_json['data']))
         self.assertEqual(response_json['data'][0]['name'], data['name'])
+        data = {'version_id': response_json['data'][0]['versionId']}
+        response = self.client.get(reverse('plugin-detail'), headers=headers, data=data)
+        self.assertEqual(response.status_code, 200)
+        response_json = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(response.success, True, response_json['errorMessage'])
+
 
 class OperationLogViewTests(TestCase):
     def setUp(self):
         # 准备测试数据，例如创建一个插件实例
         account = get_account(account="Lucas")
-        self.plugin = Plugin.objects.create(name='Test',icon_url='dddd',type='L',created_user=account)
+        self.plugin = Plugin.objects.create(name='Test',icon_url='dddd',type=Plugin.TYPE_LINK,created_user=account)
         self.plugin_version =  PluginVersion.objects.create(
                     plugin=self.plugin,
                     version_no='1.0.0',
@@ -112,20 +118,20 @@ class OperationLogViewTests(TestCase):
     def test_post_and_get_log(self):
         token = get_token_by_account(account="Lucas")
         headers = {'X-Token': token}
-        version_id = self.plugin_version.id
-        url = reverse('plugin-log', args=[version_id])
-        response = self.client.get(url, headers=headers)
+        data = {'version_id': self.plugin_version.id}
+        url = reverse('plugin-log')
+        response = self.client.get(url, headers=headers, data=data)
         self.assertEqual(response.status_code, 200)
         response_json = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response.success, True, response_json['errorMessage'])
         count = len(response_json['data'])
-        data = {'type':OperationLog.TYPE_OPEN }
+        data = {'type':OperationLog.TYPE_OPEN,'version_id': self.plugin_version.id }
         json_data = json.dumps(data)
         response = self.client.post(url, headers=headers, data=json_data, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_json = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response.success, True, response_json['errorMessage'])
-        response = self.client.get(url, headers=headers)
+        response = self.client.get(url, headers=headers, data=data)
         self.assertEqual(response.status_code, 200)
         response_json = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response.success, True, response_json['errorMessage'])
