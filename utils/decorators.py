@@ -20,7 +20,7 @@ def admin_required(f):
     @wraps(f)
     def wrapper(cls, request, *args, **kwargs):
         # 提取请求中的用户信息
-        account = request.META.get('account')
+        account = request.account
         if not account:
             return JsonResponse(error_type=ErrorType.AUTH_FAILED, status_code=HttpStatus.HTTP_401_UNAUTHORIZED)
 

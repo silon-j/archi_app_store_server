@@ -76,3 +76,4 @@ class AccountEmailAuthCode(ModelMixin):
     class Meta:
         db_table = 'account_email_auth_code'
         ordering = ('-id',)
+
