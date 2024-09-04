@@ -15,6 +15,7 @@ from django.db import transaction
 from utils.utils import generate_random_str
 from django.conf import settings
 from smtplib import SMTPRecipientsRefused
+import loguru
 
 __EMAIL_SUBJECT__ = "数字化工具库-验证码"
 
@@ -59,10 +60,12 @@ class RegisterVerifyCode(View):
         注册新用户的发送验证码逻辑
         '''
         if err:
+            loguru.logger.error(str(err))
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         is_account_exist: bool = Account.objects.filter(email=form.email).exists()
 
         if is_account_exist:
+            loguru.logger.error(f"Email: {form.email} {ErrorType.ACCOUNT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
         
         code = generate_random_str(6, True)
@@ -74,15 +77,18 @@ class RegisterVerifyCode(View):
             expired = timezone.now() + timedelta(minutes=settings.VERIFY_CODE_EXPIRED),
             code_choice=EmailAuthCodeChoice.REGISTER
             )
-        print(f"邮箱是{email_auth_code.email}")
+        
         try:
             # 发送验证码
             send_verify_code(email_auth_code.code, email_auth_code.email)
             email_auth_code.save()
+            loguru.logger.info(f"{email_auth_code.email} Verify code send successfully {email_auth_code.expired} Expired!")
             return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
         except SMTPRecipientsRefused:
+            loguru.logger.error(f"Email: {form.email} {ErrorType.ACCOUNT_MAIL_DONT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_DONT_EXIST)
         except Exception as e:
+            loguru.logger.error(str(e))
             return JsonResponse(error_message=e)
         
 class ChangePasswordVerifyCode(View):
@@ -94,10 +100,12 @@ class ChangePasswordVerifyCode(View):
             ).parse(request.GET)
         
         if err:
+            loguru.logger.error(str(err))
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         account: Account = Account.objects.filter(email=form.email).first()
         if account is None:
+            loguru.logger.warning(f"Email: {form.email} {ErrorType.ACCOUNT_NOT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
 
         # 生成随机码        
@@ -115,5 +123,6 @@ class ChangePasswordVerifyCode(View):
         send_verify_code(email_auth_code.code, email_auth_code.email)
 
         email_auth_code.save()
+        loguru.logger.info(f"Account: {form.username}, Verify code send successfully")
         return JsonResponse(data='验证码已发送', status_code=HttpStatus.HTTP_200_OK)
     

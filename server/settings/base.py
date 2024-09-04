@@ -31,12 +31,6 @@ logger.info("server starting...")
 env_file = os.path.join(BASE_DIR, '.env')
 env = environ.Env(
     # 设置参数和默认值
-    DATABASE_MYSQL_NAME=(str, ''),
-    DATABASE_MYSQL_PASSWORD=(str, ''),
-    DATABASE_MYSQL_USER=(str, ''),
-    DATABASE_MYSQL_HOST=(str, ''),
-    DATABASE_MYSQL_PORT=(str, ''),
-    MYSQL_ALLOWED_TIME_ZONE=(str, ''),
     DATABASE_POSTGRES_NAME=(str, ''),
     DATABASE_POSTGRES_USER=(str, ''),
     DATABASE_POSTGRES_PASSWORD=(str, ''),
@@ -128,15 +122,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 """
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DATABASES = {
-    'mysql': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DATABASE_MYSQL_NAME').strip(),
-        'PASSWORD': env('DATABASE_MYSQL_PASSWORD').strip(),
-        'USER': env('DATABASE_MYSQL_USER').strip(),
-        'HOST': env('DATABASE_MYSQL_HOST').strip(),
-        'PORT': env('DATABASE_MYSQL_PORT').strip(),
-        'TIME_ZONE': env('MYSQL_ALLOWED_TIME_ZONE').strip(),
-    },
+    
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': env('DATABASE_POSTGRES_NAME').strip(),

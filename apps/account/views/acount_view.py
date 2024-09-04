@@ -1,6 +1,3 @@
-import secrets
-import string
-import random
 from apps.account.models import Account, EmailAuthCodeChoice, AccountEmailAuthCode, LoginLog
 from libs.boost.http import HttpStatus
 from libs.boost.parser import Argument, JsonParser
@@ -14,7 +11,7 @@ from datetime import timedelta
 from django.db import transaction
 from utils.utils import get_client_ip
 import uuid
-
+import loguru
 
 class ChangePasswordView(View):
     
@@ -34,12 +31,14 @@ class ChangePasswordView(View):
 
         if error:
             # 客户端没有发送所需的参数
+            loguru.logger.error(str(error))
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         # 检查用户是否存在
         account = Account.objects.filter(username=form.username).first()
         if account is None:
             # 用户不存在
+            loguru.logger.error(f"Account: {form.username} {ErrorType.ACCOUNT_NOT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
 
         vertify_code = AccountEmailAuthCode.objects.filter(
@@ -56,8 +55,10 @@ class ChangePasswordView(View):
             account.save()
             vertify_code.is_valid = False
             vertify_code.save()
+            loguru.logger.info(f"Account: {account.username}, {self.__CHANGE_SUCCESS__}")
             return JsonResponse(data=self.__CHANGE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
         else:
+            loguru.logger.error(f"Account: {form.username}, VerifyCode: {form.verify_code} {ErrorType.VERIFY_CODE_ERROR.message}")
             return JsonResponse(error_type=ErrorType.VERIFY_CODE_ERROR)
 
 class RegisterView(View):
@@ -79,12 +80,14 @@ class RegisterView(View):
 
         if error:
             # 客户端没有发送所需的参数
+            loguru.logger.error(str(error))
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         # 检查用户或者邮箱是否存在
         is_account_exist = Account.objects.filter(Q(email=form.email) | Q(username=form.username)).exists()
         if is_account_exist:
             # 用户已存在
+            loguru.logger.error(f"Account: {form.username} {ErrorType.ACCOUNT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
         
         vertify_code = AccountEmailAuthCode.objects.filter(
@@ -107,11 +110,13 @@ class RegisterView(View):
             vertify_code.is_valid = False
             vertify_code.is_success = True
             vertify_code.save()
+            loguru.logger.info(f"Account: {form.username} {self.__REGISTE_SUCCESS__}")
             return JsonResponse(data=self.__REGISTE_SUCCESS__, status_code=HttpStatus.HTTP_201_CREATED)
         else:
             if vertify_code:
                 vertify_code.is_valid = False
                 vertify_code.save()
+            loguru.logger.error(f"Account: {form.username}, VerifyCode: {form.verify_code} {ErrorType.VERIFY_CODE_ERROR.message}")
             return JsonResponse(error_type=ErrorType.VERIFY_CODE_ERROR)
 
 class LoginView(View):
@@ -126,6 +131,7 @@ class LoginView(View):
         ).parse(request.body)
         
         if error:
+            loguru.logger.error(str(error))
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
 #       记录一次用户登录
@@ -143,6 +149,7 @@ class LoginView(View):
             login_log.message = ErrorType.ACCOUNT_NOT_EXIST.message
             login_log.is_success = False
             login_log.save()
+            loguru.logger.error(f"Account: {form.username} {ErrorType.ACCOUNT_NOT_EXIST.message}")
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
         
         if account.verify_password(form.password) == False:
@@ -150,6 +157,7 @@ class LoginView(View):
             login_log.message = ErrorType.LOGIN_FAILED.message
             login_log.is_success = False
             login_log.save()
+            loguru.logger.error(f"Account: {form.username} {ErrorType.LOGIN_FAILED.message}")
             return JsonResponse(error_type=ErrorType.LOGIN_FAILED)
         
         #如果数据一致则生成生成密钥给用户
@@ -165,5 +173,6 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
+        loguru.logger.info(f"Account: {form.username} Login Success!")
         return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_201_CREATED)
     
