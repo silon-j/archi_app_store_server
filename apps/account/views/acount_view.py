@@ -174,5 +174,5 @@ class LoginView(View):
         login_log.save()
 
         loguru.logger.info(f"Account: {form.username} Login Success!")
-        return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data={"token": account.access_token, "username": account.username}, status_code=HttpStatus.HTTP_201_CREATED)
     
