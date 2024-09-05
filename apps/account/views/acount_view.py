@@ -1,6 +1,3 @@
-import secrets
-import string
-import random
 from apps.account.models import Account, EmailAuthCodeChoice, AccountEmailAuthCode, LoginLog
 from libs.boost.http import HttpStatus
 from libs.boost.parser import Argument, JsonParser
@@ -14,7 +11,7 @@ from datetime import timedelta
 from django.db import transaction
 from utils.utils import get_client_ip
 import uuid
-
+import loguru
 
 class ChangePasswordView(View):
     
@@ -165,5 +162,5 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(data=account.access_token, status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data={"token": account.access_token, "username": account.username}, status_code=HttpStatus.HTTP_201_CREATED)
     

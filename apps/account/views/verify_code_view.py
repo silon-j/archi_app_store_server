@@ -15,6 +15,7 @@ from django.db import transaction
 from utils.utils import generate_random_str
 from django.conf import settings
 from smtplib import SMTPRecipientsRefused
+import loguru
 
 __EMAIL_SUBJECT__ = "数字化工具库-验证码"
 
@@ -74,7 +75,7 @@ class RegisterVerifyCode(View):
             expired = timezone.now() + timedelta(minutes=settings.VERIFY_CODE_EXPIRED),
             code_choice=EmailAuthCodeChoice.REGISTER
             )
-        print(f"邮箱是{email_auth_code.email}")
+        
         try:
             # 发送验证码
             send_verify_code(email_auth_code.code, email_auth_code.email)
@@ -83,6 +84,7 @@ class RegisterVerifyCode(View):
         except SMTPRecipientsRefused:
             return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_DONT_EXIST)
         except Exception as e:
+            loguru.logger.warning(str(e))
             return JsonResponse(error_message=e)
         
 class ChangePasswordVerifyCode(View):
