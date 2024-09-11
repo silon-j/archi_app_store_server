@@ -98,7 +98,7 @@ class ChangePasswordVerifyCode(View):
         if err:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
-        account: Account = Account.objects.filter(email=form.email).first()
+        account: Account = Account.objects.filter(email=form.email, username=form.username).first()
         if account is None:
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
 

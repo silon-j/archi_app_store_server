@@ -10,11 +10,11 @@ class Account(ModelMixin):
     # 文档中描述的账号->首字母加工号
     username = models.CharField(max_length = 20)
     # 真实姓名
-    fullname = models.CharField(max_length = 20)
+    fullname = models.CharField(max_length = 20, null=True)
     # 所属部门
     department = models.CharField(max_length = 100)
     password_hash = models.CharField(max_length = 100)
-    email = models.CharField(max_length=100, null=True)
+    email = models.CharField(max_length=100)
     # 是否管理员
     can_admin = models.BooleanField(default=False)
     is_super= models.BooleanField(default=False)
