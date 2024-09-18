@@ -128,7 +128,7 @@ class PluginView(View):
                 loguru.logger.error(f"创建失败: {e}")
                 return JsonResponse(error_message=e)
         return JsonResponse(pluginObj.id)
-    
+    @admin_required
     def patch(self, request:HttpRequest):
         plugin, error = JsonParser(
             Argument('id', data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
@@ -191,6 +191,19 @@ class PluginVersionView(View):
             for category in item.categories.filter(id__in=category_ids):
                 result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
         return JsonResponse(result)
+    
+    @admin_required
+    def patch(self, request:HttpRequest):
+        version, error = JsonParser(
+            Argument('id', data_type=int, required=True, filter_func=lambda id: PluginVersion.objects.filter(id=id).exists()),
+            Argument('version_no', data_type=str, required=True),
+            Argument('description', data_type=str, required=True),
+        ).parse(request.body)
+        if error:
+            return JsonResponse(error_message=error)
+        # if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
+        #     return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
+        return JsonResponse(PluginVersion.objects.filter(id=version.id).update(description=version.description,version_no=version.version_no))
 
 #插件版本信息
 class PluginVersionListView(View):
@@ -324,7 +337,6 @@ class PluginVersionDetailView(View):
         }
         # 返回JSON响应
         return JsonResponse(plugin_dto)
-
 #操作记录
 class OperationLogView(View):
     def post(self, request:HttpRequest):
