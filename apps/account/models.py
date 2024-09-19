@@ -18,6 +18,7 @@ class Account(ModelMixin):
     # 是否管理员
     can_admin = models.BooleanField(default=False)
     is_super= models.BooleanField(default=False)
+    # 激活状态
     is_active = models.BooleanField(default=True)
     access_token = models.CharField(max_length=32, null=True, blank=True)
     token_expired = models.DateTimeField(null=True, default=None)
