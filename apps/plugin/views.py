@@ -25,7 +25,7 @@ class CosTempCredentialView(View):
         config = {
             'url': 'https://sts.tencentcloudapi.com/',
             # 临时密钥有效时长，单位是秒
-            'duration_seconds': 36000,
+            'duration_seconds': 1800,
             'secret_id': os.environ['COS_SECRET_ID'],
             # 固定密钥
             'secret_key': os.environ['COS_SECRET_KEY'],
