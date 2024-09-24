@@ -17,7 +17,7 @@ class HandleExceptionMiddleware(MiddlewareMixin):
     """
 
     def process_exception(self, request, exception):
-        traceback.print_exc()
+        # traceback.print_exc()
         trace_back = traceback.format_exc()
         logger.error(trace_back)
 
@@ -31,7 +31,6 @@ class AutoRequestPostMiddleware(MiddlewareMixin):
     def process_request(self, request):
         if request.method in ALLOWED_POST_TYPE_METHODS and request.content_type not in REQUEST_POST_PROCESS_TYPES:
             request.POST = request.body
-        return request
 
 
 class CamelToSnakeMiddleware(MiddlewareMixin):
