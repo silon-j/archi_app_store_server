@@ -7,6 +7,9 @@ from django.utils.deprecation import MiddlewareMixin
 from loguru import logger
 from .utils import underscoreize, camelize
 
+REQUEST_POST_PROCESS_TYPES = ('application/x-www-form-urlencoded', 'multipart/form-data')
+ALLOWED_POST_TYPE_METHODS = ('POST', 'PATCH', 'PUT')
+ALLOWED_GET_TYPE_METHODS = ('GET', 'DELETE')
 
 class HandleExceptionMiddleware(MiddlewareMixin):
     """
@@ -21,17 +24,24 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
     """请求及返回参数序列化，进行驼峰和蛇形互转
     """
     def process_request(self, request):
-        if request.method in ('POST', 'PATCH', 'PUT'):
-            try:
-                data = json.loads(request.body.decode('utf-8'))
-                snake_case_data = underscoreize(data)
-                request._body = snake_case_data
-            except json.JSONDecodeError:
-                # 如果解析失败，可能是非JSON格式的数据，不做处理
-                pass
-        elif request.method in ('GET', 'DELETE'):
-            new_data = underscoreize(request.GET)
-            request.GET = new_data
+        # post 相关请求
+        if request.method in ALLOWED_POST_TYPE_METHODS:
+            # 非form格式请求均尝试通过json解析
+            if not request.content_type in REQUEST_POST_PROCESS_TYPES:
+                try:
+                    data = json.loads(request.body.decode('utf-8'))
+                    snake_case_data = underscoreize(data)
+                    request._body = snake_case_data
+                except json.JSONDecodeError:
+                    raise NotImplementedError("Unable to decode JSON data.")
+            # form格式请求直接转换为request.POST
+            else:
+                new_post_data = underscoreize(request.POST)
+                request.POST = new_post_data
+        # url 请求
+        elif request.method in ALLOWED_GET_TYPE_METHODS:
+            new_get_data = underscoreize(request.GET)
+            request.GET = new_get_data
         else:
             raise NotImplementedError(f"Unsupported request method: {request.method}")
 
