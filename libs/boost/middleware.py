@@ -7,7 +7,9 @@ from django.utils.deprecation import MiddlewareMixin
 from loguru import logger
 from .utils import underscoreize, camelize
 
-
+REQUEST_POST_PROCESS_TYPES = ('application/x-www-form-urlencoded', 'multipart/form-data')
+ALLOWED_POST_TYPE_METHODS = ('POST', 'PATCH', 'PUT')
+ALLOWED_GET_TYPE_METHODS = ('GET', 'DELETE')
 
 class HandleExceptionMiddleware(MiddlewareMixin):
     """
@@ -15,7 +17,7 @@ class HandleExceptionMiddleware(MiddlewareMixin):
     """
 
     def process_exception(self, request, exception):
-        # traceback.print_exc()
+        traceback.print_exc()
         trace_back = traceback.format_exc()
         logger.error(trace_back)
 
