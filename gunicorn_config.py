@@ -1,6 +1,20 @@
 """
 gunicorn 配置
+请使用wsgi启动
 """
+import os
+
+LOG_DIR = 'logs/gunicorn'
+
+
+def init_log_dir():
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+
+
+init_log_dir()
+
+
 # 绑定ip和端口号
 bind = '0.0.0.0:8000'
 # 指定Gunicorn处理请求的队列的最大长度，如果监听队列已满，新的请求将被拒绝或丢弃
@@ -16,8 +30,8 @@ threads = 2
 # 日志级别，这个日志级别指的是错误日志的级别，而访问日志的级别无法设置
 loglevel = 'warning'
 access_log_format = '%(t)s %(p)s %(h)s "%(r)s" %(s)s %(L)s %(b)s %(f)s" "%(a)s"'
-accesslog = "logs/gunicorn/access.log"      # 访问日志文件
-errorlog = "logs/gunicorn/error.log"
+accesslog = LOG_DIR + "/access.log"      # 访问日志文件
+errorlog = LOG_DIR + "/error.log"
 
 
 def pre_fork(server, worker):
