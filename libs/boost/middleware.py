@@ -17,12 +17,26 @@ class HandleExceptionMiddleware(MiddlewareMixin):
     """
 
     def process_exception(self, request, exception):
-        traceback.print_exc()
+        # traceback.print_exc()
+        trace_back = traceback.format_exc()
+        logger.error(trace_back)
+
+
+class AutoRequestPostMiddleware(MiddlewareMixin):
+    """
+    自动处理请求参数，将表单及json请求均转移至request.POST
+    请将该中间件放置在进入视图之前，参数前期处理之后
+    """
+
+    def process_request(self, request):
+        if request.method in ALLOWED_POST_TYPE_METHODS and request.content_type not in REQUEST_POST_PROCESS_TYPES:
+            request.POST = request.body
 
 
 class CamelToSnakeMiddleware(MiddlewareMixin):
     """请求及返回参数序列化，进行驼峰和蛇形互转
     """
+
     def process_request(self, request):
         # post 相关请求
         if request.method in ALLOWED_POST_TYPE_METHODS:
@@ -45,7 +59,6 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
         else:
             raise NotImplementedError(f"Unsupported request method: {request.method}")
 
-
     def process_response(self, request, response):
         if 'application/json' in response['Content-Type']:
             content = response.content.decode('utf-8')
@@ -58,10 +71,10 @@ class CamelToSnakeMiddleware(MiddlewareMixin):
 class LogRequestMiddleware(MiddlewareMixin):
     """请求过程日志
     """
+
     def __init__(self, get_response):
         super().__init__(get_response)
         self.get_response = get_response
-
 
     def process_request(self, request):
         request_id = str(uuid.uuid4())
@@ -71,10 +84,8 @@ class LogRequestMiddleware(MiddlewareMixin):
         request.request_id = request_id
         request.start_time = time.time()
 
-
     def process_response(self, request, response):
         end_time = time.time()
         duration = end_time - request.start_time
         logger.info(f"Request processed in {duration:.2f} seconds. Response status code: {response.status_code}")
         return response
-

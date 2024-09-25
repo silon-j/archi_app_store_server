@@ -110,8 +110,10 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'libs.boost.middleware.HandleExceptionMiddleware',
     'libs.boost.middleware.LogRequestMiddleware',
     'libs.boost.middleware.CamelToSnakeMiddleware',
+    'libs.boost.middleware.AutoRequestPostMiddleware',
     'utils.middleware.AuthenticationMiddleware',
 ]
 
@@ -122,7 +124,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 """
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DATABASES = {
-    
+
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': env('DATABASE_POSTGRES_NAME').strip(),
@@ -161,16 +163,16 @@ VERIFY_CODE_EXPIRED = 5
 cors settings
 """
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS  =  [ 
-    "accept" , 
-    "accept-encoding" , 
-    "authorization" , 
-    "content-type" , 
-    "dnt" , 
-    "origin" , 
-    "user-agent" , 
-    "x-csrftoken" , 
-    "x-requested-with" , 
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
