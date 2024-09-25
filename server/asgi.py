@@ -13,7 +13,7 @@ from django.core.asgi import get_asgi_application
 
 from server.logging import setup_logging
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings.production')
 
 application = get_asgi_application()
 

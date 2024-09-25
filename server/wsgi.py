@@ -13,7 +13,7 @@ from django.core.wsgi import get_wsgi_application
 
 from server.logging import setup_logging
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings.production')
 
 application = get_wsgi_application()
 
