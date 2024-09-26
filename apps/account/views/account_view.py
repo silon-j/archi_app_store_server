@@ -1,7 +1,6 @@
 from apps.account.models import Account, EmailAuthCodeChoice, AccountEmailAuthCode, LoginLog
-from libs.boost.http import HttpStatus
 from libs.boost.parser import Argument, JsonParser
-from libs.boost.http import JsonResponse
+from libs.boost.http import JsonResponse, HttpStatus
 from const.error import ErrorType
 from django.views.generic import View
 from django.conf import settings

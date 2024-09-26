@@ -54,7 +54,7 @@ class RegisterVerifyCode(View):
 
     def get(self, request)->JsonResponse:
         form, err = JsonParser(
-            Argument('email', data_type =str, required=True),
+            Argument('email', data_type =str, required=True, filter_func=lambda email: email.endswith('@ecadi.com')),
             ).parse(request.GET)
         '''
         注册新用户的发送验证码逻辑
