@@ -26,7 +26,8 @@ def custom_logger_filter(record):
     return True
 
 
-logger.add(
+def setup_logging():
+    logger.add(
     "logs/loguru/django_request_{time:YYYY-MM-DD}.log",
     colorize=True,
     rotation="1 day",
@@ -41,3 +42,4 @@ logger.add(
 
     filter=custom_logger_filter
 )
+
