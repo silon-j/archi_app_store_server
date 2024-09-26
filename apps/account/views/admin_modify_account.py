@@ -26,8 +26,8 @@ class AdminModifyAccount(View):
         """
         form, error = JsonParser(
             Argument('id', data_type=int, required=True),
-            # 工号绑定的用户名应该不能修改的，保证唯一性，暂时注释
-            # Argument('username', data_type=str, required=False),
+            # 工号绑定的用户名应该不能修改的，保证唯一性，仅用作验证，而不修改
+            Argument('username', data_type=str, required=False),
             Argument('fullname', data_type=str, required=False),
             Argument('email', data_type=str, required=False, filter_func=lambda email: email.endswith('@ecadi.com')),
             Argument('is_admin', data_type=bool, required=False)
@@ -36,7 +36,7 @@ class AdminModifyAccount(View):
         if error:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
-        account:Account = Account.objects.filter(id = form.id).first()
+        account:Account = Account.objects.filter(id = form.id, username=form.username).first()
         if account is None:
             # 查无此人
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
@@ -44,7 +44,7 @@ class AdminModifyAccount(View):
         if form.fullname is not None:
             account.fullname = form.fullname
         if form.email is not None:
-            if not Account.objects.filter(email=form.email).exists():
+            if Account.objects.filter(email=form.email).exists():
                 # 邮箱与他人的冲突
                 return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_EXIST)
             account.email = form.email
@@ -53,7 +53,6 @@ class AdminModifyAccount(View):
         
         account.save()
         return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
-
 
 
 class AdminChangeAccountPassword(View):
@@ -87,5 +86,6 @@ class AdminChangeAccountPassword(View):
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
         
         account.password_hash = Account.make_password(form.password)
+        account.access_token = None
         account.save()
         return JsonResponse(status_code=HttpStatus.HTTP_200_OK)

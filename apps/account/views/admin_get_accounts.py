@@ -24,7 +24,7 @@ class AdminGetAllAccounts(View):
         
         # 构建一个 {username: Developer} 映射
         developers = Developer.objects.filter(
-            username__in=[account.username for account in accounts],
+            name__in=[account.username for account in accounts],
             email__in=[account.email for account in accounts]
         )
 

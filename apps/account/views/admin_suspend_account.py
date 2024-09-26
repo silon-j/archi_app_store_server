@@ -24,14 +24,14 @@ class AdminSuspendAccount(View):
             JsonResponse: _description_
         """
         form, error = JsonParser(
-            Argument('id_del', data_type=int, required=True),
-            Argument('username_del', data_type=str, required=True)
+            Argument('id_ban', data_type=int, required=True),
+            Argument('username_ban', data_type=str, required=True)
         ).parse(request.body)
 
         if error:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
-        account_ban:Account = Account.objects.filter(id=form.id_del, username = form.username_del).first()
+        account_ban:Account = Account.objects.filter(id=form.id_ban, username = form.username_ban).first()
         
         if account_ban is None:
             # 用户不存在
@@ -39,7 +39,7 @@ class AdminSuspendAccount(View):
         if account_ban.id == request.account.id:
             # 自我禁用，不被允许
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
-        if account_ban.is_active is True:
+        if account_ban.is_active is False:
             # 已经被禁用
             return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
 
@@ -66,7 +66,7 @@ class AdminDeleteAccount(View):
         form, error = JsonParser(
             Argument('id_del', data_type=int, required=True),
             Argument('username_del', data_type=str, required=True)
-        ).parse(request.body)
+        ).parse(request.GET)
 
         if error:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
@@ -111,15 +111,12 @@ class AdminActivateAccount(View):
         if error:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
-        account_ban:Account = Account.objects.filter(id=form.id_del, username = form.username_del).first()
+        account_ban:Account = Account.objects.filter(id=form.id_activation, username = form.username_activation).first()
         
-        if account_ban is None:
+        if account_ban is None or account_ban.deleted_at is not None:
             # 用户不存在
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
-        if account_ban.id == request.account.id:
-            # 自我禁用，不被允许
-            return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
-        if account_ban.is_active is False:
+        if account_ban.is_active is True:
             # 已经解禁了
             return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
 
