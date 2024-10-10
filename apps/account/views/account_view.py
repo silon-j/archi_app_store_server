@@ -148,6 +148,13 @@ class LoginView(View):
             login_log.save()
             return JsonResponse(error_type=ErrorType.LOGIN_FAILED)
         
+        if not account.is_active:
+             # 用户被ban了
+            login_log.message = ErrorType.ACCOUNT_DISABLED.message
+            login_log.is_success = False
+            login_log.save()
+            return JsonResponse(error_type=ErrorType.ACCOUNT_DISABLED)
+
         #如果数据一致则生成生成密钥给用户
         account.access_token = uuid.uuid4().hex
         account.token_expired = timezone.now() + timedelta(seconds=settings.AUTHENTICATION_EXPIRE_TIME)
