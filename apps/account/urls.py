@@ -1,5 +1,5 @@
 from django.urls import path
-from .views.account_view import LoginView, RegisterView, ChangePasswordView
+from .views.account_view import LoginView, RegisterView, ChangePasswordView, UserInfoView
 from .views.verify_code_view import RegisterVerifyCode, ChangePasswordVerifyCode
 from .views.admin_get_accounts import AdminGetAllAccounts
 from .views.admin_modify_account import AdminChangeAccountPassword, AdminModifyAccount
@@ -13,6 +13,7 @@ urlpatterns = [
     path('/register', RegisterView.as_view(), name='register'),
     path('/changepassword', ChangePasswordView.as_view(), name='change_password'),
     # 管理后台接口
+    path('/admin/userinfo', UserInfoView.as_view(), name='userinfo'),
     path('/admin/all-accounts', AdminGetAllAccounts.as_view(), name='get_all_accounts'),
     path('/admin/change-password', AdminChangeAccountPassword.as_view(), name='change_password'),
     path('/admin/modify-account', AdminModifyAccount.as_view(), name='modify_account'),

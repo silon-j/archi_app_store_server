@@ -221,6 +221,7 @@ class PluginVersionListView(View):
             {
             'id':pluginVersion.id, 
             'plugin_id':pluginVersion.plugin.id, 
+            'plugin_name':pluginVersion.plugin.name, 
             'version_no': pluginVersion.version_no, 
             'description':pluginVersion.description,
             'publish_date':pluginVersion.publish_date,
