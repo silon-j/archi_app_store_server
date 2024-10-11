@@ -102,11 +102,13 @@ middleware
     'django.middleware.csrf.CsrfViewMiddleware',
 """
 INSTALLED_APPS = [
+    'corsheaders',
     'apps.account',
     'apps.plugin',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -162,6 +164,7 @@ VERIFY_CODE_EXPIRED = 5
 """
 cors settings
 """
+CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -173,6 +176,11 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    'X-Token',
+    'timestamp',
+    'nonce',
+    'sign',
+    'appid'
 ]
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
