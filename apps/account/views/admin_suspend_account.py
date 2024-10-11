@@ -31,7 +31,7 @@ class AdminSuspendAccount(View):
         if error:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
-        account_ban:Account = Account.objects.filter(id=form.id_ban, username = form.username_ban).first()
+        account_ban:Account = Account.objects.filter(id=form.id_ban, username = form.username_ban, deleted_at__isnull=True).first()
         
         if account_ban is None:
             # 用户不存在

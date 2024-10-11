@@ -78,10 +78,11 @@ class RegisterView(View):
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         # 检查用户或者邮箱是否存在
-        is_account_exist = Account.objects.filter(Q(email=form.email) | Q(username=form.username)).exists()
-        if is_account_exist:
-            # 用户已存在
-            return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
+        exist_account: Account = Account.objects.filter((Q(email=form.email) | Q(username=form.username))).first()
+        if exist_account:
+            if exist_account.deleted_at is None:
+                # 用户已存在
+                return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
         
         vertify_code = AccountEmailAuthCode.objects.filter(
             email=form.email,
@@ -92,14 +93,25 @@ class RegisterView(View):
             ).order_by("-id").first()
         
         if  vertify_code and vertify_code.code == form.verify_code:
-            new_account : Account = Account(
-                username=form.username,
-                fullname = form.fullname,
-                department = form.department,
-                email = form.email,
-                password_hash=Account.make_password(form.password)
-                )
-            new_account.save()
+            if exist_account is None:
+                # 从来没有过记录，新建一个用户
+                new_account : Account = Account(
+                    username=form.username,
+                    fullname = form.fullname,
+                    department = form.department,
+                    email = form.email,
+                    password_hash=Account.make_password(form.password)
+                    )
+                new_account.save()
+            else:
+                # 如果找到软删除用户，则恢复该用户
+                exist_account.deleted_at = None
+                exist_account.fullname = form.fullname
+                exist_account.department = form.department
+                exist_account.is_active = True
+                exist_account.password_hash = Account.make_password(form.password)
+                exist_account.save()
+
             vertify_code.is_valid = False
             vertify_code.is_success = True
             vertify_code.save()
