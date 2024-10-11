@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views import View
 from django.db import transaction, models
 from django.db.models import Count
-
+from django.utils import timezone
 import loguru
 
 from apps.account.models import Account
@@ -140,6 +140,23 @@ class PluginView(View):
         if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
             return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
         return JsonResponse(Plugin.objects.filter(id=plugin.id).update(name=plugin.name,icon_url=plugin.icon_url))
+    
+    @admin_required
+    def delete(self, request:HttpRequest):
+        plugin, error = JsonParser(
+            Argument('id', data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+        obj:Plugin = Plugin.objects.filter(id=plugin.id).first()
+
+        if obj.deleted_at is not None:
+            return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
+            
+        obj.deleted_at = timezone.now()
+        obj.deleted_user = request.account
+        obj.save()
+        return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
 
 #插件信息
 class PluginListView(View):
@@ -204,6 +221,23 @@ class PluginVersionView(View):
         # if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
         #     return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
         return JsonResponse(PluginVersion.objects.filter(id=version.id).update(description=version.description,version_no=version.version_no))
+    
+    @admin_required
+    def delete(self, request:HttpRequest):
+        plugin_version, error = JsonParser(
+            Argument('id', data_type=int, required=True, filter_func=lambda id: PluginVersion.objects.filter(id=id).exists()),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+        obj:PluginVersion = PluginVersion.objects.filter(id=plugin_version.id).first()
+
+        if obj.deleted_at is not None:
+            return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
+            
+        obj.deleted_at = timezone.now()
+        obj.deleted_user = request.account
+        obj.save()
+        return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
 
 #插件版本信息
 class PluginVersionListView(View):
@@ -274,6 +308,23 @@ class PluginCategoryView(View):
         if PluginCategory.objects.filter(name=form.name).exclude(id=form.id).exists():
             return JsonResponse(error_message=f'分类名称:({form.name}){__FILED_EXISTS__}')
         return JsonResponse(PluginCategory.objects.filter(id=form.id).update(name=form.name))
+    
+    @admin_required
+    def delete(self, request:HttpRequest):
+        request_obj, error = JsonParser(
+            Argument('id', data_type=int, required=True, filter_func=lambda id: PluginCategory.objects.filter(id=id).exists()),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+        obj:PluginCategory = PluginCategory.objects.filter(id=request_obj.id).first()
+
+        if obj.deleted_at is not None:
+            return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
+            
+        obj.deleted_at = timezone.now()
+        obj.deleted_user = request.account
+        obj.save()
+        return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
  
     #构建插件分类的树状结构
     def _build_category_tree(self, categories):
