@@ -12,11 +12,13 @@ class SoftDeleteQuerySet(models.QuerySet):
 class SoftDeleteManager(models.Manager):
     """拓展Manager，支持软删除"""
     def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db)
-
+        return super().get_queryset().filter(deleted_at__isnull=True) 
+    
 class ModelMixin(models.Model):
     """模型混入类，提供必备默认字段及常用对象操作方法
     """
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, default=None)  # 标记伪删除状态
     last_update = models.DateTimeField(auto_now=True)
