@@ -78,7 +78,7 @@ class RegisterView(View):
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
         
         # 检查用户或者邮箱是否存在
-        exist_account: Account = Account.objects.filter((Q(email=form.email) | Q(username=form.username))).first()
+        exist_account: Account = Account.all_objects.filter((Q(email=form.email) | Q(username=form.username))).first()
         if exist_account:
             if exist_account.deleted_at is None:
                 # 用户已存在

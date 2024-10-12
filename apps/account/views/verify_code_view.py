@@ -61,7 +61,7 @@ class RegisterVerifyCode(View):
         '''
         if err:
             return JsonResponse(error_type=ErrorType.REQUEST_ILLEGAL)
-        is_account_exist: bool = Account.objects.filter(email=form.email, deleted_at__isnull=True).exists()
+        is_account_exist: bool = Account.objects.filter(email=form.email).exists()
 
         if is_account_exist:
             return JsonResponse(error_type=ErrorType.ACCOUNT_EXIST)
