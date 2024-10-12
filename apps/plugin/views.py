@@ -148,15 +148,28 @@ class PluginView(View):
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
-        obj:Plugin = Plugin.objects.filter(id=plugin.id).first()
-
-        if obj.deleted_at is not None:
-            return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
-            
-        obj.deleted_at = timezone.now()
-        obj.deleted_user = request.account
-        obj.save()
-        return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
+        with transaction.atomic():
+            savepoint_id = transaction.savepoint()
+            try:
+                # 先将子类标志为删除
+                children:PluginVersion = PluginVersion.objects.filter(plugin_id=plugin.id)
+                for child in children:
+                    child.deleted_at = timezone.now()
+                    child.deleted_user = request.account
+                    child.save()
+                obj:Plugin = Plugin.objects.filter(id=plugin.id).first()
+                if obj.deleted_at is not None:
+                    return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
+                obj.deleted_at = timezone.now()
+                obj.deleted_user = request.account
+                obj.save()
+                return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
+       
+            except Exception as e:
+                transaction.savepoint_rollback(savepoint_id)
+                # 事务继续，但是撤销到了savepoint_id指定的状态
+                loguru.logger.error(f"删除失败: {e}")
+                return JsonResponse(error_message=e)
 
 #插件信息
 class PluginListView(View):
@@ -238,7 +251,7 @@ class PluginVersionView(View):
         obj.deleted_user = request.account
         obj.save()
         return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
-
+        
 #插件版本信息
 class PluginVersionListView(View):
     @admin_required
@@ -316,15 +329,29 @@ class PluginCategoryView(View):
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
-        obj:PluginCategory = PluginCategory.objects.filter(id=request_obj.id).first()
+       
+        with transaction.atomic():
+            savepoint_id = transaction.savepoint()
+            try:
+                children:PluginCategory = PluginCategory.objects.filter(parent__id=request_obj.id)
+                for child in children:
+                    child.deleted_at = timezone.now()
+                    child.deleted_user = request.account
+                    child.save()
+                obj:PluginCategory = PluginCategory.objects.filter(id=request_obj.id).first()
 
-        if obj.deleted_at is not None:
-            return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
-            
-        obj.deleted_at = timezone.now()
-        obj.deleted_user = request.account
-        obj.save()
-        return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
+                if obj.deleted_at is not None:
+                    return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
+
+                obj.deleted_at = timezone.now()
+                obj.deleted_user = request.account
+                obj.save()
+                return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
+            except Exception as e:
+                transaction.savepoint_rollback(savepoint_id)
+                # 事务继续，但是撤销到了savepoint_id指定的状态
+                loguru.logger.error(f"删除失败: {e}")
+                return JsonResponse(error_message=e)
  
     #构建插件分类的树状结构
     def _build_category_tree(self, categories):
