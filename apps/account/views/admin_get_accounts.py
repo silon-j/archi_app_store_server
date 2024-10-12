@@ -16,7 +16,7 @@ class AdminGetAllAccounts(View):
     @admin_required
     def get(self, request:HttpRequest):
         
-        accounts = Account.objects.filter()
+        accounts = Account.objects.all()
         
         # 批量获取所有操作日志的数量，并构建 {account_id: use_count} 映射
         operation_logs = OperationLog.objects.values('created_user').annotate(use_count=models.Count('id'))
