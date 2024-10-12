@@ -30,7 +30,7 @@ class AuthenticationMiddleware(MiddlewareMixin):
         account = self.get_current_account(request)
         if account is not None:
             # 用户被禁用或者已经被删除
-            if (not account.is_active) or (account.deleted_at is not None):
+            if not account.is_active:
                 return JsonResponse(error_type=ErrorType.ACCOUNT_DISABLED, status_code=HttpStatus.HTTP_401_UNAUTHORIZED)
             if account.is_active and account.token_expired >= timezone.now():
                 request.account = account
