@@ -28,7 +28,7 @@ class AdminModifyAccount(View):
             Argument('id', data_type=int, required=True),
             # 工号绑定的用户名应该不能修改的，保证唯一性，仅用作验证，而不修改
             Argument('username', data_type=str, required=False),
-            Argument('fullname', data_type=str, required=False),
+            Argument('fullname', data_type=str, nullable=True, required=False),
             Argument('email', data_type=str, required=False, filter_func=lambda email: email.endswith('@ecadi.com')),
             Argument('is_admin', data_type=bool, required=False)
         ).parse(request.body)
@@ -40,11 +40,13 @@ class AdminModifyAccount(View):
         if account is None:
             # 查无此人
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
-        
         if form.fullname is not None:
-            account.fullname = form.fullname
+            if form.fullname == "":
+                account.fullname = None
+            else:
+                account.fullname = form.fullname
         if form.email is not None:
-            if Account.objects.filter(email=form.email).exists():
+            if Account.objects.exclude(id=form.id).filter(email=form.email).exists():
                 # 邮箱与他人的冲突
                 return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_EXIST)
             account.email = form.email
