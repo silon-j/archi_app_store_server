@@ -134,12 +134,24 @@ class PluginView(View):
             Argument('id', data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
             Argument('name', data_type=str, required=True),
             Argument('icon_url', data_type=str, required=True),
+            Argument('category_ids', data_type=list, required=False),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
         if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
             return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
-        return JsonResponse(Plugin.objects.filter(id=plugin.id).update(name=plugin.name,icon_url=plugin.icon_url))
+        if plugin.category_ids is None:
+           return JsonResponse(Plugin.objects.filter(id=plugin.id).update(name=plugin.name,icon_url=plugin.icon_url))
+        else:
+            categories = PluginCategory.objects.filter(id__in=plugin.category_ids)
+            if categories.count() < len(plugin.category_ids):
+                return JsonResponse(error_message=f"存在非法的插件分类Id")
+            plugin_obj = Plugin.objects.filter(id=plugin.id).first()
+            plugin_obj.name = plugin.name
+            plugin_obj.icon_url = plugin.icon_url
+            plugin_obj.categories.set(categories)
+            plugin_obj.save()
+            return JsonResponse()
     
     @admin_required
     def delete(self, request:HttpRequest):
@@ -186,6 +198,7 @@ class PluginListView(View):
             'id':plugin.id, 
             'icon_url':plugin.icon_url, 
             'name': plugin.name, 
+            'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
             'type':plugin.type,
             'version_count':plugin.versions.count(),
             'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
@@ -199,19 +212,27 @@ class PluginVersionView(View):
     def get(self, request:HttpRequest):
         param, error = JsonParser(
             Argument('name', data_type=str, required=False),
-            Argument('category_id', data_type=int, required=True, help=f'分类ID{__FILED_REQUIRED__}'),
+            Argument('category_id', data_type=int, required=False, help=f'分类ID{__FILED_REQUIRED__}'),
+            Argument('ids', data_type=list, required=False),
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
+        if param.category_id == None and param.ids == None:
+            return JsonResponse(error_message=f"分类ID{__FILED_REQUIRED__}")
         # 从所有插件开始
         plugin_ids = Plugin.objects.all().values('id')
+        if param.ids:
+            plugin_ids = plugin_ids.filter(id__in=param.ids)
+            if len(plugin_ids) != len(param.ids):
+                return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
         if param.name:
             plugin_ids = plugin_ids.filter(name__icontains=param.name)
-        if not PluginCategory.objects.filter(id=param.category_id).exists():
-            return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
-        category_ids_query = PluginCategory.objects.filter(parent__id=param.category_id).values('id')
-        category_ids = [item['id'] for item in category_ids_query]
-        plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
+        if param.category_id:
+            if not PluginCategory.objects.filter(id=param.category_id).exists():
+                return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
+            category_ids_query = PluginCategory.objects.filter(parent__id=param.category_id).values('id')
+            category_ids = [item['id'] for item in category_ids_query]
+            plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
         plugins = Plugin.objects.all().filter(id__in=plugin_ids)
         #怎么获取最新的插件版本 item.versions.first() 这里要特殊处理下
         result = []
@@ -295,7 +316,7 @@ class PluginCategoryView(View):
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
-        if PluginCategory.objects.filter(name=form.name).exists():
+        if (form.parent_id != None and PluginCategory.objects.filter(name=form.name, parent__id=form.parent_id).exists()) or (form.parent_id == None and PluginCategory.objects.filter(name=form.name).exists()):
             return JsonResponse(error_message=f'分类名称:({form.name}){__FILED_EXISTS__}')
         parent_category = None
         if form.parent_id != None and form.parent_id > 0:
