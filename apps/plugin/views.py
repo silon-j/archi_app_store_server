@@ -211,22 +211,29 @@ class PluginVersionView(View):
     #获取插件列表
     def get(self, request:HttpRequest):
         param, error = JsonParser(
-            Argument('name', data_type=str, required=False),
-            Argument('category_id', data_type=int, required=False, help=f'分类ID{__FILED_REQUIRED__}'),
-            Argument('ids', data_type=list, required=False),
+            Argument('category_id', data_type=int, required=False),
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
+        param.ids = request.GET.getlist('ids')
         if param.category_id == None and param.ids == None:
             return JsonResponse(error_message=f"分类ID{__FILED_REQUIRED__}")
         # 从所有插件开始
         plugin_ids = Plugin.objects.all().values('id')
+        #如果直接查询插件版本列表，使用特殊逻辑返回数据
         if param.ids:
-            plugin_ids = plugin_ids.filter(id__in=param.ids)
-            if len(plugin_ids) != len(param.ids):
+            try:
+                [int(id) for id in param.ids]
+            except:
                 return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
-        if param.name:
-            plugin_ids = plugin_ids.filter(name__icontains=param.name)
+            plugin_versions = PluginVersion.objects.filter(id__in=param.ids)
+            if len(plugin_versions) != len(param.ids):
+                return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
+            result = []
+            for item in plugin_versions:
+                tags = [tag.text for tag in item.tags.all()]
+                result.append({'id':item.plugin.id, 'version_id':item.id, 'version_no':item.version_no, 'name':item.plugin.name, 'icon_url':item.plugin.icon_url, 'attachment_url':item.attachment_url, 'attachment_size':item.attachment_size, 'execution_file_path':item.execution_file_path,'type':item.plugin.type, 'tags': tags })
+            return JsonResponse(result)
         if param.category_id:
             if not PluginCategory.objects.filter(id=param.category_id).exists():
                 return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
@@ -239,7 +246,7 @@ class PluginVersionView(View):
         for item in plugins:
             newest_version = item.versions.order_by('-id').first()
             tags = [tag.text for tag in newest_version.tags.all()]
-            for category in item.categories.filter(id__in=category_ids):
+            for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
                 result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
         return JsonResponse(result)
     
