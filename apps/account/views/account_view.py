@@ -187,5 +187,5 @@ class UserInfoView(View):
         current_user = request.account
         if current_user is None:
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
-        return JsonResponse(data={"username": current_user.username, "nickname": current_user.fullname, "avatarUrl": '' }, status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data={"username": current_user.username, "nickname": current_user.fullname, "avatarUrl": '', "is_admin": current_user.can_admin & current_user.is_super,  "email": current_user.email, 'department': current_user.department }, status_code=HttpStatus.HTTP_201_CREATED)
     
