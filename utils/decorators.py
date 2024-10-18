@@ -25,7 +25,7 @@ def admin_required(f):
             return JsonResponse(error_type=ErrorType.AUTH_FAILED, status_code=HttpStatus.HTTP_401_UNAUTHORIZED)
 
         # 检查用户是否具有管理员或超级用户权限
-        if not account.can_admin and not account.is_super:
+        if not account.can_admin: # and not account.is_super:
             # 如果用户没有必要的权限，返回错误响应
             return JsonResponse(error_type=ErrorType.PERMIT_FAILED, status_code=HttpStatus.HTTP_403_FORBIDDEN)
         # 用户具有足够的权限，调用原始的视图函数

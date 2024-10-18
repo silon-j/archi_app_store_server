@@ -51,7 +51,7 @@ class AdminModifyAccount(View):
                 return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_EXIST)
             account.email = form.email
         if form.is_admin is not None:
-            account.is_super = form.is_admin
+            account.can_admin = form.is_admin
         
         account.save()
         return JsonResponse(status_code=HttpStatus.HTTP_200_OK)

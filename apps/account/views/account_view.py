@@ -180,12 +180,12 @@ class LoginView(View):
         login_log.is_success = True
         login_log.save()
 
-        return JsonResponse(data={"token": account.access_token, "username": account.username, "is_admin": account.can_admin & account.is_super }, status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data={"token": account.access_token, "username": account.username, "is_admin": account.can_admin }, status_code=HttpStatus.HTTP_201_CREATED)
     
 class UserInfoView(View):
     def get(self, request) -> JsonResponse:
         current_user = request.account
         if current_user is None:
             return JsonResponse(error_type=ErrorType.ACCOUNT_NOT_EXIST)
-        return JsonResponse(data={"username": current_user.username, "nickname": current_user.fullname, "avatarUrl": '', "is_admin": current_user.can_admin & current_user.is_super,  "email": current_user.email, 'department': current_user.department }, status_code=HttpStatus.HTTP_201_CREATED)
+        return JsonResponse(data={"username": current_user.username, "nickname": current_user.fullname, "avatarUrl": '', "is_admin": current_user.can_admin, 'is_super': current_user.is_super,  "email": current_user.email, 'department': current_user.department }, status_code=HttpStatus.HTTP_201_CREATED)
     
