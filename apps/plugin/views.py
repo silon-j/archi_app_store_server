@@ -10,7 +10,7 @@ from apps.account.models import Account
 from apps.plugin.models import Developer, OperationLog, Plugin, PluginCategory, PluginVersion, Tag
 from const.error import ErrorType
 from libs.boost.parser import Argument, JsonParser
-from libs.boost.http import HttpStatus, JsonResponse
+from libs.boost.http import HttpStatus, JsonResponse, paginate_data
 import os
 from sts.sts import Sts
 from utils.decorators import admin_required
@@ -79,6 +79,7 @@ class PluginView(View):
             Argument('type', data_type=int, required=True, filter_func=lambda type: [Plugin.TYPE_PLUGIN, Plugin.TYPE_LINK, Plugin.TYPE_APPLICATION].__contains__(type)),
             Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
+            Argument('is_external', data_type=bool, required=False),
             Argument('execution_file_path', data_type=str, required=False),
             Argument('authors', data_type=list, required=False),
             Argument('tags', data_type=list, required=False),
@@ -98,6 +99,8 @@ class PluginView(View):
                     name=plugin.name,
                     icon_url=plugin.icon_url,
                     type=plugin.type,
+                    description=plugin.description,
+                    is_external=plugin.is_external if plugin.is_external is not None else False,
                     created_user=request.account
                 )
                 pluginObj.categories.set(categories)
@@ -105,6 +108,7 @@ class PluginView(View):
                 for tag_text in plugin.tags:
                     tag, created = Tag.objects.get_or_create(text=tag_text)  # 假设Tag模型有一个name字段
                     tags.append(tag)
+                pluginObj.tags.set(tags)
                 developers = []
                 for developer in plugin.authors:
                     if developer.get('name','') == '':
@@ -114,13 +118,12 @@ class PluginView(View):
                 pluginVersionObj = PluginVersion.objects.create(
                     plugin=pluginObj,
                     version_no=plugin.version_no,
-                    description=plugin.description,
+                    description='',
                     attachment_url=plugin.attachment_url,
                     attachment_size=plugin.attachment_size,
                     execution_file_path=plugin.execution_file_path,
                     created_user=request.account
                 )
-                pluginVersionObj.tags.set(tags)
                 pluginVersionObj.authors.set(developers)
             except Exception as e:
                 transaction.savepoint_rollback(savepoint_id)
@@ -187,24 +190,28 @@ class PluginView(View):
 class PluginListView(View):
     @admin_required
     def get(self, request:HttpRequest):
-        # param, error = JsonParser(
-        #     Argument('view', data_type=str, required=True, help=f'视图模型{__FILED_REQUIRED__}', filter_func=lambda name: [self.VIEW_MAIN, self.VIEW_SECOND].__contains__(name)),
-        # ).parse(request.GET)
-        # if error:
-        #     return JsonResponse(error_message=error)
+        param, error = JsonParser(
+            Argument('current', data_type=int, required=False),
+            Argument('page_size', data_type=int, required=False),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+
         plugins = Plugin.objects.all()
-        result = [
-            {
-            'id':plugin.id, 
-            'icon_url':plugin.icon_url, 
-            'name': plugin.name, 
-            'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
-            'type':plugin.type,
-            'version_count':plugin.versions.count(),
-            'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
-            } 
-            for plugin in plugins]
-        return JsonResponse(result)
+        page_data = paginate_data(plugins, 
+                                  current=param.current if param.current != None else 1, 
+                                  page_size=param.page_size if param.page_size != None else 10, 
+                                  item_handler=lambda plugin:
+                                    {
+                                    'id':plugin.id, 
+                                    'icon_url':plugin.icon_url, 
+                                    'name': plugin.name, 
+                                    'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
+                                    'type':plugin.type,
+                                    'version_count':plugin.versions.count(),
+                                    'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
+                                    })
+        return JsonResponse(page_data)
 
 #插件版本信息
 class PluginVersionView(View):
@@ -216,22 +223,22 @@ class PluginVersionView(View):
         if error:
             return JsonResponse(error_message=error)
         param.ids = request.GET.getlist('ids')
-        if param.category_id == None and param.ids == None:
+        if param.category_id == None and (param.ids == None or len(param.ids) == 0):
             return JsonResponse(error_message=f"分类ID{__FILED_REQUIRED__}")
         # 从所有插件开始
         plugin_ids = Plugin.objects.all().values('id')
         #如果直接查询插件版本列表，使用特殊逻辑返回数据
-        if param.ids:
+        if param.ids and len(param.ids) > 0:
             try:
                 [int(id) for id in param.ids]
             except:
                 return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
             plugin_versions = PluginVersion.objects.filter(id__in=param.ids)
-            if len(plugin_versions) != len(param.ids):
-                return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
+            # if len(plugin_versions) != len(param.ids):
+            #     return JsonResponse(error_message=f"存在非法或已被删除的插件版本Id")
             result = []
             for item in plugin_versions:
-                tags = [tag.text for tag in item.tags.all()]
+                tags = [tag.text for tag in item.plugin.tags.all()]
                 result.append({'id':item.plugin.id, 'version_id':item.id, 'version_no':item.version_no, 'name':item.plugin.name, 'icon_url':item.plugin.icon_url, 'attachment_url':item.attachment_url, 'attachment_size':item.attachment_size, 'execution_file_path':item.execution_file_path,'type':item.plugin.type, 'tags': tags })
             return JsonResponse(result)
         if param.category_id:
@@ -245,7 +252,7 @@ class PluginVersionView(View):
         result = []
         for item in plugins:
             newest_version = item.versions.order_by('-id').first()
-            tags = [tag.text for tag in newest_version.tags.all()]
+            tags = [tag.text for tag in item.tags.all()]
             for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
                 result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
         return JsonResponse(result)
@@ -284,26 +291,28 @@ class PluginVersionView(View):
 class PluginVersionListView(View):
     @admin_required
     def get(self, request:HttpRequest):
-        # param, error = JsonParser(
-        #     Argument('name', data_type=str, required=False),
-        #     Argument('category_id', data_type=int, required=True, help=f'分类ID{__FILED_REQUIRED__}'),
-        # ).parse(request.GET)
-        # if error:
-        #     return JsonResponse(error_message=error)
+        param, error = JsonParser(
+            Argument('current', data_type=int, required=False),
+            Argument('page_size', data_type=int, required=False),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
         # 从所有插件开始
         pluginVersions = PluginVersion.objects.all()
-        result = [
-            {
-            'id':pluginVersion.id, 
-            'plugin_id':pluginVersion.plugin.id, 
-            'plugin_name':pluginVersion.plugin.name, 
-            'version_no': pluginVersion.version_no, 
-            'description':pluginVersion.description,
-            'publish_date':pluginVersion.publish_date,
-            'use_count': pluginVersion.logs.count()
-            } 
-            for pluginVersion in pluginVersions]
-        return JsonResponse(result)
+        page_data = paginate_data(pluginVersions, 
+                                  current=param.current if param.current != None else 1, 
+                                  page_size=param.page_size if param.page_size != None else 10, 
+                                  item_handler=lambda pluginVersion:
+                                    {
+                                    'id':pluginVersion.id, 
+                                    'plugin_id':pluginVersion.plugin.id, 
+                                    'plugin_name':pluginVersion.plugin.name, 
+                                    'version_no': pluginVersion.version_no, 
+                                    'description':pluginVersion.description,
+                                    'publish_date':pluginVersion.publish_date,
+                                    'use_count': pluginVersion.logs.count()
+                                    })
+        return JsonResponse(page_data)
 
 #插件分类信息接口
 class PluginCategoryView(View):
@@ -400,18 +409,28 @@ class PluginCategoryListView(View):
     def get(self, request:HttpRequest):
         param, error = JsonParser(
             Argument('view', data_type=str, required=True, help=f'视图模型{__FILED_REQUIRED__}', filter_func=lambda name: [self.VIEW_MAIN, self.VIEW_SECOND].__contains__(name)),
+            Argument('current', data_type=int, required=False),
+            Argument('page_size', data_type=int, required=False),
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
         try:
             if param.view == self.VIEW_MAIN:
                 categories = list(PluginCategory.objects.filter(parent=None))
-                result = [{'id':category.id, 'name':category.name, 'children_count': category.children.count(), 'app_count': category.children.aggregate(appcount=models.Count('plugin_category'))['appcount'] } for category in categories]
-                return JsonResponse(result)
+                page_data = paginate_data(categories, 
+                                          current=param.current if param.current != None else 1, 
+                                          page_size=param.page_size if param.page_size != None else 10, 
+                                          item_handler=lambda category:
+                                          {'id':category.id, 'name':category.name, 'children_count': category.children.count(), 'app_count': category.children.aggregate(appcount=models.Count('plugin_category'))['appcount'] } )
+                return JsonResponse(page_data)
             else:
                 categories = list(PluginCategory.objects.filter(parent__isnull=False))
-                result = [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name, 'app_count': category.plugin_category.count() } for category in categories]
-                return JsonResponse(result)
+                page_data = paginate_data(categories, 
+                                          current=param.current if param.current != None else 1, 
+                                          page_size=param.page_size if param.page_size != None else 10, 
+                                          item_handler=lambda category:
+                                          {'id':category.id, 'name':category.name, 'parent_name':category.parent.name, 'app_count': category.plugin_category.count() })
+                return JsonResponse(page_data)
         except Exception as e:
             loguru.logger.error(f"获取插件分类失败: {e}")
             return JsonResponse(error_message='获取插件分类失败')
@@ -434,12 +453,13 @@ class PluginVersionDetailView(View):
             'version_no': pluginVersionObj.version_no,
             'versions':[{ 'id': item.id, 'version_no': item.version_no } for item in pluginVersionObj.plugin.versions.all()],
             'name': pluginVersionObj.plugin.name, 
-            'description':pluginVersionObj.description,
+            'description':pluginVersionObj.plugin.description,
+            'update_description':pluginVersionObj.description,
             'attachment_url':pluginVersionObj.attachment_url,
             'attachment_size':pluginVersionObj.attachment_size,
             'execution_file_path':pluginVersionObj.execution_file_path,
             'publish_date':pluginVersionObj.publish_date,
-            'tags':[item.text for item in pluginVersionObj.tags.all()],
+            'tags':[item.text for item in pluginVersionObj.plugin.tags.all()],
             'authors':[{'name':item.name, 'phone':item.phone,'email':item.email} for item in pluginVersionObj.authors.all()],
         }
         # 返回JSON响应
@@ -467,31 +487,4 @@ class OperationLogView(View):
         logs = OperationLog.objects.filter(version__id=form.version_id)
         return JsonResponse([{'id':log.id,'plugin_name':log.version.plugin.name, 'version_no':log.version.version_no, 'type': log.type, 'created_at':log.created_at } for log in logs])
     
-
-#用户信息表
-class AccountListView(View):
-    @admin_required
-    def get(self, request:HttpRequest):
-        # param, error = JsonParser(
-        #     Argument('view', data_type=str, required=True, help=f'视图模型{__FILED_REQUIRED__}', filter_func=lambda name: [self.VIEW_MAIN, self.VIEW_SECOND].__contains__(name)),
-        # ).parse(request.GET)
-        # if error:
-        #     return JsonResponse(error_message=error)
-        accounts = Account.objects.all()
-        result = [
-            {
-            'id':account.id, 
-            'username':account.username, 
-            'fullname':account.fullname, 
-            'email': account.email, 
-            'can_admin':account.can_admin,
-            'is_super':account.is_super,
-            'is_active':account.is_active,
-            'is_active':account.is_active,
-            'app_use_count':account.operationlog_set.count(),
-            'app_publish_count':0, #TODO 这个逻辑比较恶心，建议暂时别写
-            'last_login':account.last_login,
-            } 
-            for account in accounts]
-        return JsonResponse(result)
  
