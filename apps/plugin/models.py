@@ -12,7 +12,7 @@ class Tag(ModelMixin):
         return self.text
     class Meta:
         db_table = 'plugin_tag'
-        ordering = ('-id',)
+        ordering = ('id',)
     
 # 开发者信息
 class Developer(ModelMixin):
@@ -23,7 +23,7 @@ class Developer(ModelMixin):
         return self.name
     class Meta:
         db_table = 'plugin_developer'
-        ordering = ('-id',)
+        ordering = ('id',)
 
 # 插件分类信息
 class PluginCategory(ModelAudit):
@@ -40,7 +40,7 @@ class PluginCategory(ModelAudit):
         return self.name
     class Meta:
         db_table = 'plugin_category'
-        ordering = ('-id',)
+        ordering = ('id',)
 
 # 插件信息
 class Plugin(ModelAudit):
@@ -54,13 +54,16 @@ class Plugin(ModelAudit):
     )
     name = models.CharField(max_length=200)
     type = models.IntegerField(choices=TYPES_CHOICES, default=TYPE_LINK, verbose_name='版本类别')
+    is_external = models.BooleanField(default=False, verbose_name='是否外部插件')
+    description = models.TextField(verbose_name='插件说明', default='')
     icon_url = models.URLField('插件图标')
+    tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_plugin_tag')
     categories = models.ManyToManyField(PluginCategory, related_name='plugin_category', db_table='r_plugin_category')
     def __str__(self):
         return self.name
     class Meta:
         db_table = 'plugin'
-        ordering = ('-id',)
+        ordering = ('id',)
     
 # 插件版本信息
 class PluginVersion(ModelAudit):
@@ -79,19 +82,18 @@ class PluginVersion(ModelAudit):
     ]
     plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE, related_name='versions')
     version_no = models.CharField(max_length=50,verbose_name='版本号')
-    description = models.TextField(verbose_name='版本说明')
+    description = models.TextField(verbose_name='更新说明')
     attachment_url = models.URLField(verbose_name='文件链接') #文件链接
     attachment_size = models.BigIntegerField(verbose_name='文件大小', null=True)
     execution_file_path = models.CharField(max_length=200,verbose_name='应用入口',null=True,blank=True)
     authors = models.ManyToManyField(Developer, db_table='r_plugin_version_developer')
-    tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_plugin_version_tag')
     status = models.IntegerField(choices=STATUSES_CHOICES, default=STATUS_NEW, verbose_name='状态')
     publish_date = models.DateTimeField("发布时间", default=timezone.now)
     def __str__(self):
         return self.plugin.name
     class Meta:
         db_table = 'plugin_version'
-        ordering = ('-id',)
+        ordering = ('id',)
 
 # 插件版本操作信息
 class OperationLog(ModelMixin):
@@ -111,4 +113,4 @@ class OperationLog(ModelMixin):
         return self.created_user.username + '-' + self.version.plugin.name + '-' + self.version.version_no
     class Meta:
         db_table = 'plugin_operation_log'
-        ordering = ('-id',)
+        ordering = ('id',)
