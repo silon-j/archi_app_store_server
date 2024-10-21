@@ -19,6 +19,7 @@ __FILED_REQUIRED__ : str = "不可以为空"
 __FILED_EXISTS__ : str = "已存在"
 __FILED_NOT_EXISTS__ : str = "不可用"
 __COS_CREDENTIAL_ERR__ : str = "获取腾讯云对象存储令牌出现错误"
+__VERSION_DELETE_REQUIRE_ERR__ : str = "无法插件最后一个版本"
 # Create your views here.
 class CosTempCredentialView(View):
     def get(self, request:HttpRequest):
@@ -281,7 +282,8 @@ class PluginVersionView(View):
 
         if obj.deleted_at is not None:
             return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
-            
+        if PluginVersion.objects.filter(plugin__id=obj.plugin_id).count == 1:
+            return JsonResponse(error_message=__VERSION_DELETE_REQUIRE_ERR__)
         obj.deleted_at = timezone.now()
         obj.deleted_user = request.account
         obj.save()

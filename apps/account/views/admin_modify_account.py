@@ -50,7 +50,11 @@ class AdminModifyAccount(View):
                 # 邮箱与他人的冲突
                 return JsonResponse(error_type=ErrorType.ACCOUNT_MAIL_EXIST)
             account.email = form.email
-        if form.is_admin is not None:
+        if form.is_admin is not None and form.is_admin != account.can_admin:
+            if request.account.is_super == False:
+                return JsonResponse(error_message='仅允许超级管理员修改用户的权限')
+            if account.is_super:
+                return JsonResponse(error_message='不允许修改超级管理员的权限')
             account.can_admin = form.is_admin
         
         account.save()
