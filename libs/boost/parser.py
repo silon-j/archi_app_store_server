@@ -32,6 +32,8 @@ class Argument(object):
         self._check_kv(has_key, value)
         if self.required or value is not None:
             self._check_type(value)
+        if value is None:
+            return None
         if self.filter_func:
             if not self.filter_func(value):
                 raise ParseError(

@@ -5,6 +5,7 @@ from django.db import transaction, models
 from django.db.models import Count
 from django.utils import timezone
 import loguru
+from django.db.models import Q
 
 from apps.account.models import Account
 from apps.plugin.models import Developer, OperationLog, Plugin, PluginCategory, PluginVersion, Tag
@@ -19,7 +20,7 @@ __FILED_REQUIRED__ : str = "不可以为空"
 __FILED_EXISTS__ : str = "已存在"
 __FILED_NOT_EXISTS__ : str = "不可用"
 __COS_CREDENTIAL_ERR__ : str = "获取腾讯云对象存储令牌出现错误"
-__VERSION_DELETE_REQUIRE_ERR__ : str = "无法插件最后一个版本"
+__VERSION_DELETE_REQUIRE_ERR__ : str = "无法删除插件最后一个版本"
 # Create your views here.
 class CosTempCredentialView(View):
     def get(self, request:HttpRequest):
@@ -137,6 +138,7 @@ class PluginView(View):
         plugin, error = JsonParser(
             Argument('id', data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
             Argument('name', data_type=str, required=True),
+            Argument('description', data_type=str, required=False),
             Argument('icon_url', data_type=str, required=True),
             Argument('category_ids', data_type=list, required=False),
         ).parse(request.body)
@@ -152,6 +154,7 @@ class PluginView(View):
                 return JsonResponse(error_message=f"存在非法的插件分类Id")
             plugin_obj = Plugin.objects.filter(id=plugin.id).first()
             plugin_obj.name = plugin.name
+            plugin_obj.description = plugin.description
             plugin_obj.icon_url = plugin.icon_url
             plugin_obj.categories.set(categories)
             plugin_obj.save()
@@ -207,6 +210,7 @@ class PluginListView(View):
                                     'id':plugin.id, 
                                     'icon_url':plugin.icon_url, 
                                     'name': plugin.name, 
+                                    'description': plugin.description, 
                                     'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
                                     'type':plugin.type,
                                     'version_count':plugin.versions.count(),
@@ -216,10 +220,20 @@ class PluginListView(View):
 
 #插件版本信息
 class PluginVersionView(View):
+    ORDER_USE='use_count'
+    ORDER_CREATE='recent_create'
+    ORDER_UPDATE='recent_update'
+    ORDER_CHOICES = (
+        (ORDER_USE, '下载量'),
+        (ORDER_CREATE, '最近创建'),
+        (ORDER_UPDATE, '最近更新'),
+    )
     #获取插件列表
     def get(self, request:HttpRequest):
         param, error = JsonParser(
+            Argument('search', data_type=str, required=False),
             Argument('category_id', data_type=int, required=False),
+            Argument('order', data_type=str, required=False, filter_func=lambda order_type: [PluginVersionView.ORDER_USE, PluginVersionView.ORDER_CREATE, PluginVersionView.ORDER_UPDATE].__contains__(order_type))
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
@@ -248,7 +262,18 @@ class PluginVersionView(View):
             category_ids_query = PluginCategory.objects.filter(parent__id=param.category_id).values('id')
             category_ids = [item['id'] for item in category_ids_query]
             plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
+        if param.search and len(param.search) > 0:
+            # 插件名称, 插件描述 ,更新描述, 标签 包含搜索内容
+            plugin_ids = plugin_ids.filter(Q(description__contains=param.search)|Q(tags__text__contains=param.search)|Q(versions__description__contains=param.search)).values('id')
         plugins = Plugin.objects.all().filter(id__in=plugin_ids)
+        if param.order:
+            match param.order:
+                case PluginVersionView.ORDER_USE:
+                    plugins = plugins.annotate(log_count=Count('versions__logs')).order_by('log_count')  
+                case PluginVersionView.ORDER_CREATE:
+                    plugins = plugins.order_by('-created_at')
+                case PluginVersionView.ORDER_UPDATE:
+                    plugins = plugins.order_by('-versions__created_at')                
         #怎么获取最新的插件版本 item.versions.first() 这里要特殊处理下
         result = []
         for item in plugins:
@@ -264,13 +289,51 @@ class PluginVersionView(View):
             Argument('id', data_type=int, required=True, filter_func=lambda id: PluginVersion.objects.filter(id=id).exists()),
             Argument('version_no', data_type=str, required=True),
             Argument('description', data_type=str, required=True),
+            Argument('developers', data_type=list, required=False),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
         # if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
         #     return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
-        return JsonResponse(PluginVersion.objects.filter(id=version.id).update(description=version.description,version_no=version.version_no))
+        with transaction.atomic():
+            savepoint_id = transaction.savepoint()
+            try:
+                pluginVersionObj = PluginVersion.objects.filter(id=version.id).first()
+                pluginVersionObj.description = version.description
+                pluginVersionObj.version_no = version.version_no
+
+                if version.developers is not None:
+                    developers = []
+                    for developer in version.developers:
+                        if developer.get('name','') == '':
+                            transaction.savepoint_rollback(savepoint_id)
+                            return JsonResponse(error_message=f"开发者名字{__FILED_REQUIRED__}")
+                        developer_id = int(developer.get('id',0))
+                        if developer_id > 0:
+                            if Developer.objects.filter(id=developer_id).exists():
+                                developer_obj = Developer.objects.filter(id=developer_id).first()
+                                developer_obj.name = developer.get('name')
+                                developer_obj.phone = developer.get('phone', '')
+                                developer_obj.email = developer.get('email','')
+                                developer_obj.save()
+                            else:
+                                transaction.savepoint_rollback(savepoint_id)
+                                return JsonResponse(error_message=f"不存在的开发者id-{developer_id}")
+                        else:
+                            developer_obj, created = Developer.objects.get_or_create(name=developer.get('name'),phone=developer.get('phone', ''),email=developer.get('email','')) 
+                        developers.append(developer_obj)
+                    pluginVersionObj.authors.set(developers)
+                    
+                pluginVersionObj.save()
+                return JsonResponse(status_code=HttpStatus.HTTP_200_OK)
     
+            except Exception as e:
+                transaction.savepoint_rollback(savepoint_id)
+                # 事务继续，但是撤销到了savepoint_id指定的状态
+                loguru.logger.error(f"更新失败: {e}")
+                return JsonResponse(error_message=e)
+
+
     @admin_required
     def delete(self, request:HttpRequest):
         plugin_version, error = JsonParser(
@@ -282,7 +345,7 @@ class PluginVersionView(View):
 
         if obj.deleted_at is not None:
             return JsonResponse(status_code=HttpStatus.HTTP_204_NO_CONTENT)
-        if PluginVersion.objects.filter(plugin__id=obj.plugin_id).count == 1:
+        if PluginVersion.objects.filter(plugin__id=obj.plugin_id).count() == 1:
             return JsonResponse(error_message=__VERSION_DELETE_REQUIRE_ERR__)
         obj.deleted_at = timezone.now()
         obj.deleted_user = request.account
@@ -312,6 +375,7 @@ class PluginVersionListView(View):
                                     'version_no': pluginVersion.version_no, 
                                     'description':pluginVersion.description,
                                     'publish_date':pluginVersion.publish_date,
+                                    'developers': [{'id': author.id, 'name': author.name, 'email': author.email, 'phone': author.phone} for author in pluginVersion.authors.all()],
                                     'use_count': pluginVersion.logs.count()
                                     })
         return JsonResponse(page_data)
