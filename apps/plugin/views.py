@@ -231,14 +231,14 @@ class PluginVersionView(View):
     #获取插件列表
     def get(self, request:HttpRequest):
         param, error = JsonParser(
-            Argument('search', data_type=str, required=False),
+            Argument('filter', data_type=str, required=False),
             Argument('category_id', data_type=int, required=False),
             Argument('order', data_type=str, required=False, filter_func=lambda order_type: [PluginVersionView.ORDER_USE, PluginVersionView.ORDER_CREATE, PluginVersionView.ORDER_UPDATE].__contains__(order_type))
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
         param.ids = request.GET.getlist('ids')
-        if param.category_id == None and (param.ids == None or len(param.ids) == 0):
+        if (param.category_id is None and param.filter is None) and (param.ids is None or len(param.ids) == 0):
             return JsonResponse(error_message=f"分类ID{__FILED_REQUIRED__}")
         # 从所有插件开始
         plugin_ids = Plugin.objects.all().values('id')
@@ -256,15 +256,16 @@ class PluginVersionView(View):
                 tags = [tag.text for tag in item.plugin.tags.all()]
                 result.append({'id':item.plugin.id, 'version_id':item.id, 'version_no':item.version_no, 'name':item.plugin.name, 'icon_url':item.plugin.icon_url, 'attachment_url':item.attachment_url, 'attachment_size':item.attachment_size, 'execution_file_path':item.execution_file_path,'type':item.plugin.type, 'tags': tags })
             return JsonResponse(result)
+        category_ids = None
         if param.category_id:
             if not PluginCategory.objects.filter(id=param.category_id).exists():
                 return JsonResponse(error_message=f"分类id{__FILED_NOT_EXISTS__}")
             category_ids_query = PluginCategory.objects.filter(parent__id=param.category_id).values('id')
             category_ids = [item['id'] for item in category_ids_query]
             plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
-        if param.search and len(param.search) > 0:
+        if param.filter and len(param.filter) > 0:
             # 插件名称, 插件描述 ,更新描述, 标签 包含搜索内容
-            plugin_ids = plugin_ids.filter(Q(description__contains=param.search)|Q(tags__text__contains=param.search)|Q(versions__description__contains=param.search)).values('id')
+            plugin_ids = plugin_ids.filter(Q(name__contains=param.filter)|Q(description__contains=param.filter)|Q(tags__text__contains=param.filter)|Q(versions__description__contains=param.filter)).values('id')
         plugins = Plugin.objects.all().filter(id__in=plugin_ids)
         if param.order:
             match param.order:
@@ -279,8 +280,12 @@ class PluginVersionView(View):
         for item in plugins:
             newest_version = item.versions.order_by('-id').first()
             tags = [tag.text for tag in item.tags.all()]
-            for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
-                result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
+            if param.category_id:
+                for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
+                    result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
+            else:
+                result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'tags': tags })
+
         return JsonResponse(result)
     
     @admin_required
