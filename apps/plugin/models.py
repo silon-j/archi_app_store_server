@@ -56,14 +56,23 @@ class Plugin(ModelAudit):
     type = models.IntegerField(choices=TYPES_CHOICES, default=TYPE_LINK, verbose_name='版本类别')
     is_external = models.BooleanField(default=False, verbose_name='是否外部插件')
     description = models.TextField(verbose_name='插件说明', default='')
+    link = models.TextField(verbose_name='插件链接', default='', null=True, blank=True)
     icon_url = models.URLField('插件图标')
     tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_plugin_tag')
     categories = models.ManyToManyField(PluginCategory, related_name='plugin_category', db_table='r_plugin_category')
     def __str__(self):
         return self.name
+    
+    def to_dto(self):
+        dto = self.to_dict(selects=['id','name','icon_url','type','link','is_external','description'])
+        dto['tags'] = [item.text for item in self.tags.all()]
+        dto['categoryIds'] = [item.id for item in self.categories.all()]
+        return dto
+    
     class Meta:
         db_table = 'plugin'
         ordering = ('id',)
+    
     
 # 插件版本信息
 class PluginVersion(ModelAudit):

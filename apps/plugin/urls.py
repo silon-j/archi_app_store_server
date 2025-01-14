@@ -6,6 +6,7 @@ urlpatterns = [
     path('/cos-credential', CosTempCredentialView.as_view()),
     path('/category', PluginCategoryView.as_view(), name='plugin-category'),
     path('', PluginView.as_view(), name='plugin'),
+    path('/releases', PluginPublishListView.as_view(), name='plugin-release'),
     path('/list', PluginListView.as_view(), name='plugin-list'),
     path('/version', PluginVersionView.as_view(), name='plugin-version'),
     path('/version/list', PluginVersionListView.as_view(), name='plugin-version-list'),
