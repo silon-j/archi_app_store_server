@@ -78,6 +78,7 @@ class PluginView(View):
             Argument('category_ids', data_type=list, required=True),
             Argument('version_no', data_type=str, required=True),
             Argument('description', data_type=str, required=True),
+            Argument('link', data_type=str, required=False),
             Argument('type', data_type=int, required=True, filter_func=lambda type: [Plugin.TYPE_PLUGIN, Plugin.TYPE_LINK, Plugin.TYPE_APPLICATION].__contains__(type)),
             Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
@@ -100,6 +101,7 @@ class PluginView(View):
                 pluginObj = Plugin.objects.create(
                     name=plugin.name,
                     icon_url=plugin.icon_url,
+                    link=plugin.link,
                     type=plugin.type,
                     description=plugin.description,
                     is_external=plugin.is_external if plugin.is_external is not None else False,
@@ -189,7 +191,18 @@ class PluginView(View):
                 # 事务继续，但是撤销到了savepoint_id指定的状态
                 loguru.logger.error(f"删除失败: {e}")
                 return JsonResponse(error_message=e)
-
+    #获取插件详情
+    def get(self, request:HttpRequest):
+        param, error = JsonParser(
+            Argument('id', data_type=int, required=True, help=f'插件ID{__FILED_REQUIRED__}', filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
+        ).parse(request.GET)
+        if error:
+            return JsonResponse(error_message=error)
+        pluginObj = Plugin.objects.filter(id=param.id).first()
+        # 将模型实例序列化为字典或其他格式
+        plugin_dto = pluginObj.to_dto()
+        # 返回JSON响应
+        return JsonResponse(plugin_dto)
 #插件信息
 class PluginListView(View):
     @admin_required
@@ -213,10 +226,24 @@ class PluginListView(View):
                                     'description': plugin.description, 
                                     'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
                                     'type':plugin.type,
+                                    'link':plugin.link,
                                     'version_count':plugin.versions.count(),
                                     'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
                                     })
         return JsonResponse(page_data)
+
+#获取我的已发布插件信息
+class PluginPublishListView(View):
+    @admin_required
+    def get(self, request:HttpRequest):
+        plugins = Plugin.objects.filter(created_user__id=request.account.id)
+        result = []
+        for item in plugins:
+            newest_version = item.versions.order_by('-id').first()
+            tags = [tag.text for tag in item.tags.all()]
+            result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'link':item.link, 'tags': tags })
+        return JsonResponse(result)
+
 
 #插件版本信息
 class PluginVersionView(View):
@@ -254,7 +281,7 @@ class PluginVersionView(View):
             result = []
             for item in plugin_versions:
                 tags = [tag.text for tag in item.plugin.tags.all()]
-                result.append({'id':item.plugin.id, 'version_id':item.id, 'version_no':item.version_no, 'name':item.plugin.name, 'icon_url':item.plugin.icon_url, 'attachment_url':item.attachment_url, 'attachment_size':item.attachment_size, 'execution_file_path':item.execution_file_path,'type':item.plugin.type, 'tags': tags })
+                result.append({'id':item.plugin.id, 'version_id':item.id, 'version_no':item.version_no, 'name':item.plugin.name, 'icon_url':item.plugin.icon_url, 'attachment_url':item.attachment_url, 'attachment_size':item.attachment_size, 'execution_file_path':item.execution_file_path,'type':item.plugin.type,'link':item.plugin.link,'tags': tags })
             return JsonResponse(result)
         category_ids = None
         if param.category_id:
@@ -282,11 +309,60 @@ class PluginVersionView(View):
             tags = [tag.text for tag in item.tags.all()]
             if param.category_id:
                 for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
-                    result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type,'category':category.name, 'tags': tags })
+                    result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'link':item.link,'category':category.name, 'tags': tags })
             else:
-                result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'tags': tags })
+                result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'link':item.link, 'tags': tags })
 
         return JsonResponse(result)
+    
+    '''
+    发布新版本信息
+    '''
+    @admin_required
+    def post(self, request:HttpRequest):
+        version, error = JsonParser(
+            Argument('app_id',  data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
+            Argument('version_no', data_type=str, required=True),
+            Argument('description', data_type=str, required=True),
+            Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
+            Argument('attachment_size', data_type=int, required=False, nullable=True),
+            Argument('is_external', data_type=bool, required=False),
+            Argument('execution_file_path', data_type=str, required=False),
+            Argument('authors', data_type=list, required=False),
+        ).parse(request.body)
+        if error:
+            return JsonResponse(error_message=error)
+        plugin = Plugin.objects.filter(id=version.app_id).first()
+        if plugin.type == Plugin.TYPE_APPLICATION and version.execution_file_path is None :
+            return JsonResponse(error_message=f"应用入口{__FILED_REQUIRED__}")
+        if PluginVersion.objects.filter(Q(plugin__id=version.app_id)&Q(version_no=version.version_no)).exists() :
+            return JsonResponse(error_message=f"插件版本号{__FILED_EXISTS__}")
+        pluginVersionObj = None
+        with transaction.atomic():
+            savepoint_id = transaction.savepoint()
+            try:
+                developers = []
+                for developer in version.authors:
+                    if developer.get('name','') == '':
+                        return JsonResponse(error_message=f"开发者名字{__FILED_REQUIRED__}")
+                    developer, created = Developer.objects.get_or_create(name=developer.get('name'),phone=developer.get('phone', ''),email=developer.get('email','')) 
+                    developers.append(developer)
+                pluginVersionObj = PluginVersion.objects.create(
+                    plugin=plugin,
+                    version_no=version.version_no,
+                    description=version.description,
+                    attachment_url=version.attachment_url,
+                    attachment_size=version.attachment_size,
+                    execution_file_path=version.execution_file_path,
+                    created_user=request.account
+                )
+                pluginVersionObj.authors.set(developers)
+            except Exception as e:
+                transaction.savepoint_rollback(savepoint_id)
+                # 事务继续，但是撤销到了savepoint_id指定的状态
+                loguru.logger.error(f"创建失败: {e}")
+                return JsonResponse(error_message=e)
+        return JsonResponse(pluginVersionObj.id)
     
     @admin_required
     def patch(self, request:HttpRequest):
@@ -525,6 +601,7 @@ class PluginVersionDetailView(View):
             'versions':[{ 'id': item.id, 'version_no': item.version_no } for item in pluginVersionObj.plugin.versions.all()],
             'name': pluginVersionObj.plugin.name, 
             'description':pluginVersionObj.plugin.description,
+            'link':pluginVersionObj.plugin.link,
             'update_description':pluginVersionObj.description,
             'attachment_url':pluginVersionObj.attachment_url,
             'attachment_size':pluginVersionObj.attachment_size,
