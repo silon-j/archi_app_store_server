@@ -32,14 +32,14 @@ class CosTempCredentialView(View):
             # 固定密钥
             'secret_key': os.environ['COS_SECRET_KEY'],
             # 换成你的 bucket
-            'bucket': 'archi-1317440414',
+            'bucket': 'app-store-1332569462',
             # 换成 bucket 所在地区
             'region': 'ap-shanghai',
             # 这里改成允许的路径前缀，可以根据自己网站的用户登录态判断允许上传的具体路径
             # 例子： a.jpg 或者 a/* 或者 * (使用通配符*存在重大安全风险, 请谨慎评估使用)
             'allow_prefix': ['app_store/attachments/*','app_store/icons/*'],
             'resource': [
-                "qcs::cos:ap-shanghai:archi-1317440414/app_store/*"
+                "qcs::cos:ap-shanghai:app-store-1332569462/app_store/*"
             ],
             # 密钥的权限列表。简单上传和分片需要以下的权限，其他权限列表请看 https://cloud.tencent.com/document/product/436/31923
             'allow_actions': [
@@ -80,7 +80,7 @@ class PluginView(View):
             Argument('description', data_type=str, required=True),
             Argument('link', data_type=str, required=False),
             Argument('type', data_type=int, required=True, filter_func=lambda type: [Plugin.TYPE_PLUGIN, Plugin.TYPE_LINK, Plugin.TYPE_APPLICATION].__contains__(type)),
-            Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
+            Argument('attachment_url', data_type=str, required=True, help=f"请确认文件上传完成或填写文件链接"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
             Argument('is_external', data_type=bool, required=False),
             Argument('execution_file_path', data_type=str, required=False),
@@ -324,7 +324,7 @@ class PluginVersionView(View):
             Argument('app_id',  data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
             Argument('version_no', data_type=str, required=True),
             Argument('description', data_type=str, required=True),
-            Argument('attachment_url', data_type=str, required=True, help=f"文件链接{__FILED_REQUIRED__}"),
+            Argument('attachment_url', data_type=str, required=True, help=f"请确认文件上传完成或填写文件链接"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
             Argument('is_external', data_type=bool, required=False),
             Argument('execution_file_path', data_type=str, required=False),
@@ -502,7 +502,8 @@ class PluginCategoryView(View):
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
-        if PluginCategory.objects.filter(name=form.name).exclude(id=form.id).exists():
+        plugin = PluginCategory.objects.filter(id=form.id).first()
+        if (plugin.parent_id != None and PluginCategory.objects.filter(name=form.name, parent__id=plugin.parent_id).exclude(id=form.id).exists()) or (plugin.parent_id == None and PluginCategory.objects.filter(name=form.name).exclude(id=form.id).exists()):
             return JsonResponse(error_message=f'分类名称:({form.name}){__FILED_EXISTS__}')
         return JsonResponse(PluginCategory.objects.filter(id=form.id).update(name=form.name))
     
@@ -600,7 +601,9 @@ class PluginVersionDetailView(View):
             'version_no': pluginVersionObj.version_no,
             'versions':[{ 'id': item.id, 'version_no': item.version_no } for item in pluginVersionObj.plugin.versions.all()],
             'name': pluginVersionObj.plugin.name, 
+            'is_external': pluginVersionObj.plugin.is_external, 
             'description':pluginVersionObj.plugin.description,
+            'update_description':pluginVersionObj.description,
             'link':pluginVersionObj.plugin.link,
             'update_description':pluginVersionObj.description,
             'attachment_url':pluginVersionObj.attachment_url,
