@@ -6,7 +6,7 @@ services:
     image: archi_ai_app_store_server:latest
     container_name: archi_ai_app_store_server
     ports:
-      - 8000:8007
+      - 8007:8000
     command:
       - /bin/bash
       - -c
