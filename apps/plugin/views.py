@@ -2,7 +2,7 @@ from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 from django.db import transaction, models
-from django.db.models import Count
+from django.db.models import Count,Max
 from django.utils import timezone
 import loguru
 from django.db.models import Q
@@ -143,24 +143,26 @@ class PluginView(View):
             Argument('description', data_type=str, required=False),
             Argument('icon_url', data_type=str, required=True),
             Argument('category_ids', data_type=list, required=False),
+            Argument('is_external', data_type=bool, required=False),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
         if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
             return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
-        if plugin.category_ids is None:
-           return JsonResponse(Plugin.objects.filter(id=plugin.id).update(name=plugin.name,icon_url=plugin.icon_url))
-        else:
+        plugin_obj = Plugin.objects.filter(id=plugin.id).first()
+        plugin_obj.name = plugin.name
+        plugin_obj.icon_url = plugin.icon_url
+        if plugin.category_ids is not None:
             categories = PluginCategory.objects.filter(id__in=plugin.category_ids)
             if categories.count() < len(plugin.category_ids):
                 return JsonResponse(error_message=f"存在非法的插件分类Id")
-            plugin_obj = Plugin.objects.filter(id=plugin.id).first()
-            plugin_obj.name = plugin.name
-            plugin_obj.description = plugin.description
-            plugin_obj.icon_url = plugin.icon_url
             plugin_obj.categories.set(categories)
-            plugin_obj.save()
-            return JsonResponse()
+        if plugin_obj.description is not None:
+            plugin_obj.description = plugin.description
+        if plugin_obj.is_external is not None:
+            plugin_obj.is_external = plugin.is_external
+        plugin_obj.save()
+        return JsonResponse()
     
     @admin_required
     def delete(self, request:HttpRequest):
@@ -226,6 +228,7 @@ class PluginListView(View):
                                     'description': plugin.description, 
                                     'categories': [{'id':category.id, 'name':category.name, 'parent_name':category.parent.name if category.parent != None else None } for category in plugin.categories.all()],
                                     'type':plugin.type,
+                                    'is_external':plugin.is_external,
                                     'link':plugin.link,
                                     'version_count':plugin.versions.count(),
                                     'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
@@ -260,7 +263,8 @@ class PluginVersionView(View):
         param, error = JsonParser(
             Argument('filter', data_type=str, required=False),
             Argument('category_id', data_type=int, required=False),
-            Argument('order', data_type=str, required=False, filter_func=lambda order_type: [PluginVersionView.ORDER_USE, PluginVersionView.ORDER_CREATE, PluginVersionView.ORDER_UPDATE].__contains__(order_type))
+            # , filter_func=lambda order_type: [PluginVersionView.ORDER_USE, PluginVersionView.ORDER_CREATE, PluginVersionView.ORDER_UPDATE].__contains__(order_type)
+            Argument('order', data_type=str, required=False)
         ).parse(request.GET)
         if error:
             return JsonResponse(error_message=error)
@@ -292,16 +296,18 @@ class PluginVersionView(View):
             plugin_ids = plugin_ids.filter(categories__id__in=category_ids)
         if param.filter and len(param.filter) > 0:
             # 插件名称, 插件描述 ,更新描述, 标签 包含搜索内容
-            plugin_ids = plugin_ids.filter(Q(name__contains=param.filter)|Q(description__contains=param.filter)|Q(tags__text__contains=param.filter)|Q(versions__description__contains=param.filter)).values('id')
+            plugin_ids = plugin_ids.filter(Q(name__icontains=param.filter)|Q(description__icontains=param.filter)|Q(tags__text__icontains=param.filter)|Q(versions__description__icontains=param.filter)).values('id')
         plugins = Plugin.objects.all().filter(id__in=plugin_ids)
         if param.order:
+            if [PluginVersionView.ORDER_USE, PluginVersionView.ORDER_CREATE, PluginVersionView.ORDER_UPDATE].__contains__(param.order) == False:
+                param.order = PluginVersionView.ORDER_USE
             match param.order:
                 case PluginVersionView.ORDER_USE:
                     plugins = plugins.annotate(log_count=Count('versions__logs')).order_by('log_count')  
                 case PluginVersionView.ORDER_CREATE:
                     plugins = plugins.order_by('-created_at')
                 case PluginVersionView.ORDER_UPDATE:
-                    plugins = plugins.order_by('-versions__created_at')                
+                    plugins = plugins.annotate(newest_version_id=Max('versions__id')).order_by('-newest_version_id')            
         #怎么获取最新的插件版本 item.versions.first() 这里要特殊处理下
         result = []
         for item in plugins:
@@ -326,7 +332,6 @@ class PluginVersionView(View):
             Argument('description', data_type=str, required=True),
             Argument('attachment_url', data_type=str, required=True, help=f"请确认文件上传完成或填写文件链接"),
             Argument('attachment_size', data_type=int, required=False, nullable=True),
-            Argument('is_external', data_type=bool, required=False),
             Argument('execution_file_path', data_type=str, required=False),
             Argument('authors', data_type=list, required=False),
         ).parse(request.body)

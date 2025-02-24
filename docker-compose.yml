@@ -1,13 +1,22 @@
-version: '3.8'  # 指定docker-compose.yml文件的版本
-
 services:
-  postgres:
-    image: 'postgres:14.5-alpine'
-    restart: always
-    environment:
-      POSTGRES_DB: appstore
-      POSTGRES_USER: unittest
-      POSTGRES_PASSWORD: unittest
-      TZ: Asia/Shanghai
+  archi_ai_app_store_server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: archi_ai_app_store_server:latest
+    container_name: archi_ai_app_store_server
     ports:
-      - 5435:5432
+      - 8000:8007
+    command:
+      - /bin/bash
+      - -c
+      - |
+        python3 manage.py migrate &&
+        python3 manage.py createcachetable &&
+        gunicorn server.wsgi:application -c gunicorn_config.py --bind 0.0.0.0:8000
+    volumes:
+    - log_files:/app/logs
+
+
+volumes:
+  log_files:

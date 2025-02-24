@@ -31,7 +31,7 @@ class Argument(object):
         """
         self._check_kv(has_key, value)
         if self.required or value is not None:
-            self._check_type(value)
+            value = self._check_type(value)
         if value is None:
             return None
         if self.filter_func:
@@ -66,10 +66,11 @@ class Argument(object):
                 value = json.loads(value)
                 assert isinstance(value, self.data_type)
             elif self.data_type == bool and isinstance(value, str):
-                value = value.lower() in ('true', 'false')
-                value = value.lower() == 'true'
+                if value.lower() in ('true', 'false'):
+                    value = value.lower() == 'true'
             elif not isinstance(value, self.data_type):
                 value = self.data_type(value)
+            return value
         except (TypeError, ValueError, AssertionError):
             raise ParseError(
                 self.help or 'Type Error: %s type must be %s' % (self.name, self.data_type))
