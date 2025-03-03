@@ -315,7 +315,7 @@ class PluginVersionView(View):
             tags = [tag.text for tag in item.tags.all()]
             if param.category_id:
                 for category in item.categories.filter(id__in=category_ids) if category_ids != None else item.categories.all():
-                    result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'link':item.link,'category':category.name, 'tags': tags })
+                    result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'link':item.link,'category':category.name, 'category_id':category.id,'tags': tags })
             else:
                 result.append({'id':item.id, 'version_id':newest_version.id, 'version_no':newest_version.version_no, 'name':item.name, 'icon_url':item.icon_url, 'attachment_url':newest_version.attachment_url, 'attachment_size':newest_version.attachment_size, 'execution_file_path':newest_version.execution_file_path,'type':item.type, 'link':item.link, 'tags': tags })
 
@@ -625,7 +625,7 @@ class OperationLogView(View):
     def post(self, request:HttpRequest):
         form, error = JsonParser(
             Argument('version_id', data_type=int, required=True, help=f'插件版本ID{__FILED_REQUIRED__}'),
-            Argument('type', data_type=str, required=True, filter_func=lambda type: [OperationLog.TYPE_OPEN, OperationLog.TYPE_OPEN , OperationLog.TYPE_INSTALL].__contains__(type)),
+            Argument('type', data_type=int, required=True, filter_func=lambda type: [OperationLog.TYPE_OPEN, OperationLog.TYPE_OPEN , OperationLog.TYPE_INSTALL].__contains__(type)),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
