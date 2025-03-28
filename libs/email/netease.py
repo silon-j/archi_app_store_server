@@ -33,10 +33,10 @@ class MailServer:
     def login(self):
         """连接到 SMTP 服务器
         """
-        smtp_server = 'smtp.ecadi.com'
-        smtp_port = 25
-        self.server = smtplib.SMTP(smtp_server, smtp_port)
-        # self.sever = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        smtp_server = 'smtp.163.com'
+        smtp_port = 465
+        # self.server = smtplib.SMTP(smtp_server, smtp_port)
+        self.server = smtplib.SMTP_SSL(smtp_server, smtp_port)
 
         # 登录邮箱账户
         self.server.login(self.sender, self.password)
