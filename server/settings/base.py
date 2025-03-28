@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.account',
     'apps.plugin',
+    'apps.client'
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,7 @@ CACHES = {
 # token校验白名单
 AUTHENTICATION_EXCLUDES = (
     re.compile(r'^/api/v\d+/account/(?!admin).*'),
+    re.compile(r'^/api/v\d+/client/version_check/?$'), 
 )
 
 # token过期时间
