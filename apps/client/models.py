@@ -12,6 +12,8 @@ class ClientVersion(ModelMixin):
     description = models.TextField(verbose_name='更新说明', default='')
     version_str = models.CharField(max_length=32, null=False)
     cos_dir = models.URLField(null=False, verbose_name='下载地址', max_length=512)
+    sha512_hash = models.CharField(max_length=128, default='')
+    size = models.BigIntegerField(default=0)
 
     class Meta:
         db_table = 'client'
