@@ -8,7 +8,6 @@ ENV PYTHONUNBUFFERED 1
 RUN mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.bak
 ADD ./source.list /etc/apt/sources.list.d/debian.sources
 RUN apt-get update && apt-get install -y \
-    ffmpeg \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
