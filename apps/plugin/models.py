@@ -58,13 +58,14 @@ class Plugin(ModelAudit):
     description = models.TextField(verbose_name='插件说明', default='')
     link = models.TextField(verbose_name='插件链接', default='', null=True, blank=True)
     icon_url = models.URLField('插件图标')
+    user_manual = models.URLField(verbose_name="User Manual Link", null=True)
     tags = models.ManyToManyField(Tag, related_name='tags',db_table='r_plugin_tag')
     categories = models.ManyToManyField(PluginCategory, related_name='plugin_category', db_table='r_plugin_category')
     def __str__(self):
         return self.name
     
     def to_dto(self):
-        dto = self.to_dict(selects=['id','name','icon_url','type','link','is_external','description'])
+        dto = self.to_dict(selects=['id','name','icon_url','type','link','is_external','description', 'user_manual'])
         dto['tags'] = [item.text for item in self.tags.all()]
         dto['categoryIds'] = [item.id for item in self.categories.all()]
         return dto

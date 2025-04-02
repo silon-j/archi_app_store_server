@@ -86,6 +86,7 @@ class PluginView(View):
             Argument('execution_file_path', data_type=str, required=False),
             Argument('authors', data_type=list, required=False),
             Argument('tags', data_type=list, required=False),
+            Argument('user_manual', data_type=str, required=False),
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
@@ -105,7 +106,8 @@ class PluginView(View):
                     type=plugin.type,
                     description=plugin.description,
                     is_external=plugin.is_external if plugin.is_external is not None else False,
-                    created_user=request.account
+                    created_user=request.account,
+                    user_manual=plugin.user_manual
                 )
                 pluginObj.categories.set(categories)
                 tags = []
@@ -139,28 +141,35 @@ class PluginView(View):
     def patch(self, request:HttpRequest):
         plugin, error = JsonParser(
             Argument('id', data_type=int, required=True, filter_func=lambda id: Plugin.objects.filter(id=id).exists()),
-            Argument('name', data_type=str, required=True),
+            Argument('name', data_type=str, required=False),
             Argument('description', data_type=str, required=False),
-            Argument('icon_url', data_type=str, required=True),
+            Argument('icon_url', data_type=str, required=False),
             Argument('category_ids', data_type=list, required=False),
             Argument('is_external', data_type=bool, required=False),
+            Argument('user_manual', data_type=str, required=False)
         ).parse(request.body)
         if error:
             return JsonResponse(error_message=error)
         if Plugin.objects.filter(name=plugin.name).exclude(id=plugin.id).exists() :
             return JsonResponse(error_message=f"插件名称{__FILED_EXISTS__}")
         plugin_obj = Plugin.objects.filter(id=plugin.id).first()
-        plugin_obj.name = plugin.name
-        plugin_obj.icon_url = plugin.icon_url
+        if plugin.name:
+            plugin_obj.name = plugin.name
+        if plugin.icon_url:
+            plugin_obj.icon_url = plugin.icon_url
         if plugin.category_ids is not None:
             categories = PluginCategory.objects.filter(id__in=plugin.category_ids)
             if categories.count() < len(plugin.category_ids):
                 return JsonResponse(error_message=f"存在非法的插件分类Id")
             plugin_obj.categories.set(categories)
-        if plugin_obj.description is not None:
+        if plugin.description is not None:
             plugin_obj.description = plugin.description
-        if plugin_obj.is_external is not None:
+        if plugin.is_external is not None:
+            # TODO 
             plugin_obj.is_external = plugin.is_external
+        if plugin.user_manual and plugin.user_manual != '':
+            plugin_obj.user_manual = plugin.user_manual
+        plugin_obj.updated_user = request.account
         plugin_obj.save()
         return JsonResponse()
     
@@ -231,7 +240,8 @@ class PluginListView(View):
                                     'is_external':plugin.is_external,
                                     'link':plugin.link,
                                     'version_count':plugin.versions.count(),
-                                    'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count']  
+                                    'use_count': plugin.versions.annotate(log_count=Count('logs')).aggregate(use_count=models.Sum('log_count'))['use_count'],
+                                    'user_manual':plugin.user_manual
                                     })
         return JsonResponse(page_data)
 
@@ -601,6 +611,7 @@ class PluginVersionDetailView(View):
         plugin_dto = {
             'id': pluginVersionObj.id,
             'plugin_id': pluginVersionObj.plugin.id,
+            'user_manual': pluginVersionObj.plugin.user_manual,
             'icon_url': pluginVersionObj.plugin.icon_url,
             'plugin_type': pluginVersionObj.plugin.type,
             'version_no': pluginVersionObj.version_no,
