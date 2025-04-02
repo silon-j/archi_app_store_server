@@ -14,7 +14,6 @@ services:
         python3 manage.py migrate &&
         python3 manage.py createcachetable &&
         gunicorn server.wsgi:application -c gunicorn_config.py --bind 0.0.0.0:8000
-        
     volumes:
     - log_files:/app/logs
 
