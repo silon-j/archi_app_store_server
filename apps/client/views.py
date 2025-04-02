@@ -20,6 +20,8 @@ class DesktopClientVersionYmlView(View):
         # if not client_info:
         #     return JsonResponse(data = {'error_message': '客户端版本不存在'}, status=HttpStatus.HTTP_404_NOT_FOUND.value)
         latest_info =  ClientVersion.objects.filter(is_latest=True).first()
+        if not latest_info:
+            return JsonResponse(error_type=ErrorType.OBJECT_NOT_FOUND, status_code=HttpStatus.HTTP_404_NOT_FOUND.value)
         yaml_data = {
             'version': latest_info.version_str,
             'files': [
@@ -52,7 +54,8 @@ class DesktopClientVersionView(View):
         if not client_info:
             return JsonResponse(error_type=ErrorType.OBJECT_NOT_FOUND, status_code=HttpStatus.HTTP_404_NOT_FOUND.value)
         latest_info = client_info if client_info.is_latest else ClientVersion.objects.filter(is_latest=True).first()
-
+        if not latest_info:
+            return JsonResponse(error_type=ErrorType.OBJECT_NOT_FOUND, status_code=HttpStatus.HTTP_404_NOT_FOUND.value)
         update_info = {
             "need_update": not client_info.is_latest,
             "latest_version": latest_info.version_str,
