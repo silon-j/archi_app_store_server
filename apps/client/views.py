@@ -5,40 +5,7 @@ from libs.boost.http import HttpStatus
 from libs.boost.http import JsonResponse 
 from .models import ClientVersion
 from const.error import ErrorType
-import yaml
 import re
-
-class DesktopClientVersionYmlView(View):
-
-    def get(self, request: HttpRequest):
-        # form, error = JsonParser(
-        #     Argument('current_version', data_type=str, required=True)
-        # ).parse(request.GET)
-        # if error:
-        #     return JsonResponse(data = {'error_message': '非法请求'}, status=HttpStatus.HTTP_400_BAD_REQUEST.value)
-        # client_info = ClientVersion.objects.filter(version_str=form.current_version).first()
-        # if not client_info:
-        #     return JsonResponse(data = {'error_message': '客户端版本不存在'}, status=HttpStatus.HTTP_404_NOT_FOUND.value)
-        latest_info =  ClientVersion.objects.filter(is_latest=True).first()
-        if not latest_info:
-            return JsonResponse(error_type=ErrorType.OBJECT_NOT_FOUND, status_code=HttpStatus.HTTP_404_NOT_FOUND.value)
-        yaml_data = {
-            'version': latest_info.version_str,
-            'files': [
-                {
-                    'url': latest_info.cos_dir,
-                    'sha512': latest_info.sha512_hash,
-                    'size': latest_info.size
-                }
-            ],
-            'path': latest_info.cos_dir,
-            'sha512': latest_info.sha512_hash,
-            'releaseDate': latest_info.created_at.strftime("%Y-%m-%d %H:%M:%S.%f+00:00")
-        }
-        yaml_content = yaml.safe_dump(yaml_data, default_flow_style=False, sort_keys=False, indent=2, allow_unicode=True)
-        response = HttpResponse(yaml_content, content_type="application/octet-stream")
-        response["Content-Disposition"] = 'inline; filename="latest.yml"'
-        return response
 
 
 class DesktopClientVersionView(View):
