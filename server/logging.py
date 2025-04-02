@@ -32,7 +32,7 @@ def setup_logging():
     colorize=True,
     rotation="1 day",
     retention="30 days",
-    enqueue=True,
+    enqueue=False,
     level="DEBUG",
     format="{time:YYYY-MM-DD HH:mm:ss} | "
             "{extra[request_id]} | "
